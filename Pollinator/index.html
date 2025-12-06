@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background: #a2a2a2;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            z-index: 50;
+        }
+        #logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            max-width: 200px;
+            max-height: 80px;
+            z-index: 100;
+        }
+        #callout-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .dot {
+            cursor: pointer;
+            pointer-events: all;
+            transition: r 0.2s, fill 0.2s;
+        }
+        .dot:hover {
+            r: 6;
+            fill: #ff8800;
+        }
+        .callout-box {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 15px;
+            border: 1px solid black;
+            border-radius: 0px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            width: 250px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            transition: opacity 0.5s;
+            overflow: visible;
+            white-space: normal;
+        }
+        
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .callout-box {
+                width: 180px;
+                padding: 10px 12px;
+            }
+            .callout-box h3 {
+                font-size: 11px;
+                margin: 0 0 8px 0;
+            }
+            .typewriter-text {
+                font-size: 9px;
+                line-height: 1.5;
+            }
+            #logo {
+                max-width: 120px;
+                max-height: 50px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .callout-box {
+                width: 150px;
+                padding: 8px 10px;
+            }
+            .callout-box h3 {
+                font-size: 10px;
+                margin: 0 0 6px 0;
+            }
+            .typewriter-text {
+                font-size: 8px;
+                line-height: 1.4;
+            }
+        }
+        .callout-box h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 13px;
+        }
+        .typewriter-text {
+            margin: 0;
+            color: #666;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <img id="logo" src="logo.png" alt="Logo">
+    <div id="container"></div>
+    <div id="loading">Loading model...</div>
+    
+    <svg id="callout-line">
+        <line class="line" id="line1" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot1" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+        
+        <line class="line" id="line2" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot2" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+        
+        <line class="line" id="line3" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot3" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+    </svg>
+    
+    <div class="callout-box" id="callout-box-1">
+        <h3>Handle</h3>
+        <p class="typewriter-text" id="typewriter-text-1"></p>
+    </div>
+    
+    <div class="callout-box" id="callout-box-2">
+        <h3>Pollination Tip</h3>
+        <p class="typewriter-text" id="typewriter-text-2"></p>
+    </div>
+    
+    <div class="callout-box" id="callout-box-3">
+        <h3>Central Chamber</h3>
+        <p class="typewriter-text" id="typewriter-text-3"></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, model;
+        let autoRotate = true;
+        let mouseDown = false;
+
+        // Define callout configurations
+        const callouts = [
+            {
+                id: 1,
+                modelPoint: new THREE.Vector3(30, 8, 0),
+                staticBox: true,
+                staticPosition: { x: 50, y: 450 },
+                title: "Handle",
+                message: "The handle lets the worker manually sweep pollen across fields for long hours, replacing the natural movement of bees.",
+                delay: 500
+            },
+            {
+                id: 2,
+                modelPoint: new THREE.Vector3(-40, -1, 0),
+                boxOffset: 'right',
+                staticBox: true,
+                staticPosition: { x: null, y: 100 }, // Will calculate x dynamically
+                title: "Pollination Tip",
+                message: "The branching tips distribute pollen onto blossoms in place of a bee's fine motor precision, mimicking delicate contact through a crude mechanical form.",
+                delay: 1200
+            },
+            {
+                id: 3,
+                modelPoint: new THREE.Vector3(-3, -10, -15),
+                staticBox: true,
+                staticPosition: { x: 50, y: 150 },
+                title: "Central Chamber",
+                message: "The chamber stores and dispenses collected or synthetic pollen, controlling how much is released during hand-pollination.",
+                delay: 1900
+            }
+        ];
+
+        // Initialize static box positions
+        function initializeStaticBoxes() {
+            const isMobile = window.innerWidth <= 768;
+            const isSmallMobile = window.innerWidth <= 480;
+            const boxWidth = isSmallMobile ? 150 : (isMobile ? 180 : 250);
+            const rightOffset = isMobile ? 200 : 320;
+            
+            callouts.forEach(callout => {
+                if (callout.staticBox) {
+                    const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+                    
+                    // Calculate position for right-aligned boxes
+                    if (callout.boxOffset === 'right' && callout.staticPosition.x === null) {
+                        callout.staticPosition.x = window.innerWidth - rightOffset;
+                    }
+                    
+                    // Adjust positions for mobile
+                    let x = callout.staticPosition.x;
+                    let y = callout.staticPosition.y;
+                    
+                    if (isMobile) {
+                        // Adjust positions for smaller screens
+                        if (callout.id === 1) { // Handle
+                            x = 20;
+                            y = window.innerHeight - 180;
+                        } else if (callout.id === 2) { // Pollination Tip
+                            x = window.innerWidth - rightOffset;
+                            y = 80;
+                        } else if (callout.id === 3) { // Central Chamber
+                            x = 20;
+                            y = 120;
+                        }
+                    }
+                    
+                    callout.staticPosition.x = x;
+                    callout.staticPosition.y = y;
+                    callout.boxWidth = boxWidth;
+                    
+                    calloutBox.style.left = x + 'px';
+                    calloutBox.style.top = y + 'px';
+                }
+            });
+        }
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xa3a3a3);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 150);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(5, 10, 7);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-5, -10, -7);
+            scene.add(directionalLight2);
+
+            // Manual controls
+            setupControls();
+
+            // Initialize static box positions
+            initializeStaticBoxes();
+
+            // Load STL
+            loadSTL();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Start animation
+            animate();
+        }
+
+        function loadSTL() {
+            const loader = new THREE.STLLoader();
+            
+            loader.load(
+                'model.stl',
+                function (geometry) {
+                    const material = new THREE.MeshLambertMaterial({
+                        color: 0xff8800
+                    });
+
+                    model = new THREE.Mesh(geometry, material);
+
+                    // Center the model
+                    geometry.computeBoundingBox();
+                    const center = new THREE.Vector3();
+                    geometry.boundingBox.getCenter(center);
+                    geometry.translate(-center.x, -center.y, -center.z);
+
+                    // rotate model
+                    model.rotation.x = -Math.PI / 2;
+
+                    // Scale to fit view
+                    const size = new THREE.Vector3();
+                    geometry.boundingBox.getSize(size);
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 80 / maxDim; // Reduced from 100 to 80
+                    model.scale.setScalar(scale);
+
+                    scene.add(model);
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    // Show dots immediately but keep callouts hidden
+                    callouts.forEach(callout => {
+                        const dot = document.getElementById(`dot${callout.id}`);
+                        setTimeout(() => {
+                            dot.style.opacity = '1';
+                        }, callout.delay);
+                    });
+                    
+                    // Setup click handlers for dots
+                    setupDotClickHandlers();
+                },
+                function (xhr) {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                function (error) {
+                    console.error('Error loading STL:', error);
+                    document.getElementById('loading').textContent = 'Error loading model. Check console.';
+                }
+            );
+        }
+
+        // STL Loader implementation
+        THREE.STLLoader = function () {};
+        THREE.STLLoader.prototype = {
+            load: function (url, onLoad, onProgress, onError) {
+                const loader = new THREE.FileLoader();
+                loader.setResponseType('arraybuffer');
+                loader.load(url, 
+                    buffer => {
+                        try {
+                            onLoad(this.parse(buffer));
+                        } catch (e) {
+                            if (onError) onError(e);
+                        }
+                    },
+                    onProgress,
+                    onError
+                );
+            },
+            parse: function (data) {
+                const isASCII = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(new Uint8Array(data, 0, 5)) === 'solid'
+                    : data.indexOf('solid') === 0;
+
+                return isASCII ? this.parseASCII(data) : this.parseBinary(data);
+            },
+            parseBinary: function (data) {
+                const reader = new DataView(data);
+                const faces = reader.getUint32(80, true);
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+
+                for (let face = 0; face < faces; face++) {
+                    const start = 84 + face * 50;
+                    const nx = reader.getFloat32(start, true);
+                    const ny = reader.getFloat32(start + 4, true);
+                    const nz = reader.getFloat32(start + 8, true);
+
+                    for (let i = 0; i < 3; i++) {
+                        const vx = reader.getFloat32(start + 12 + i * 12, true);
+                        const vy = reader.getFloat32(start + 16 + i * 12, true);
+                        const vz = reader.getFloat32(start + 20 + i * 12, true);
+                        vertices.push(vx, vy, vz);
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            },
+            parseASCII: function (data) {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+                const text = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(data) 
+                    : data;
+                
+                const patternFace = /facet\s+normal\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+outer\s+loop\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)/g;
+                
+                let result;
+                while ((result = patternFace.exec(text)) !== null) {
+                    const nx = parseFloat(result[1]);
+                    const ny = parseFloat(result[3]);
+                    const nz = parseFloat(result[5]);
+                    
+                    for (let i = 0; i < 3; i++) {
+                        vertices.push(
+                            parseFloat(result[7 + i * 6]),
+                            parseFloat(result[9 + i * 6]),
+                            parseFloat(result[11 + i * 6])
+                        );
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            }
+        };
+
+        function setupControls() {
+            let prevX = 0, prevY = 0;
+            let rotationX = 0, rotationY = 0;
+            let distance = camera.position.z;
+
+            // Mouse events
+            renderer.domElement.addEventListener('mousedown', e => {
+                mouseDown = true;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('mousemove', e => {
+                if (!mouseDown || !model) return;
+                const dx = e.clientX - prevX;
+                const dy = e.clientY - prevY;
+                rotationY += dx * 0.005;
+                rotationX += dy * 0.005;
+                model.rotation.y = rotationY;
+                model.rotation.x = rotationX;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => mouseDown = false);
+            renderer.domElement.addEventListener('mouseleave', () => mouseDown = false);
+
+            // Touch events
+            renderer.domElement.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    mouseDown = true;
+                    prevX = e.touches[0].clientX;
+                    prevY = e.touches[0].clientY;
+                }
+            });
+
+            renderer.domElement.addEventListener('touchmove', e => {
+                if (e.touches.length === 1 && mouseDown && model) {
+                    const dx = e.touches[0].clientX - prevX;
+                    const dy = e.touches[0].clientY - prevY;
+                    rotationY += dx * 0.005;
+                    rotationX += dy * 0.005;
+                    model.rotation.y = rotationY;
+                    model.rotation.x = rotationX;
+                    prevX = e.touches[0].clientX;
+                    prevY = e.touches[0].clientY;
+                }
+            });
+
+            renderer.domElement.addEventListener('touchend', () => mouseDown = false);
+
+            // Zoom
+            renderer.domElement.addEventListener('wheel', e => {
+                e.preventDefault();
+                distance += e.deltaY * 0.1;
+                distance = Math.max(50, Math.min(500, distance));
+                camera.position.z = distance;
+            });
+        }
+
+        // Setup click handlers for dots
+        function setupDotClickHandlers() {
+            callouts.forEach(callout => {
+                const dot = document.getElementById(`dot${callout.id}`);
+                
+                dot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleCallout(callout);
+                });
+                
+                // Touch support for mobile
+                dot.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleCallout(callout);
+                });
+            });
+        }
+
+        // Toggle callout visibility
+        function toggleCallout(callout) {
+            if (callout.visible) {
+                hideCallout(callout);
+            } else {
+                showCallout(callout);
+            }
+        }
+
+        // Hide callout
+        function hideCallout(callout) {
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            
+            calloutBox.style.opacity = '0';
+            line.style.opacity = '0';
+            callout.visible = false;
+        }
+
+        // Typewriter effect
+        function typeWriter(text, element, speed = 50) {
+            let i = 0;
+            element.textContent = '';
+            
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+
+        // Show callout with animation
+        function showCallout(callout) {
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            const typewriterText = document.getElementById(`typewriter-text-${callout.id}`);
+            
+            // Update title
+            calloutBox.querySelector('h3').textContent = callout.title;
+            
+            // Fade in line
+            line.style.opacity = '0.8';
+            
+            // Fade in box
+            setTimeout(() => {
+                calloutBox.style.opacity = '1';
+            }, 300);
+            
+            // Start typewriter effect only if not already typed
+            if (typewriterText.textContent === '') {
+                setTimeout(() => {
+                    typeWriter(callout.message, typewriterText, 30);
+                }, 500);
+            }
+            
+            callout.visible = true;
+        }
+
+        // Update callout position to follow model
+        function updateCalloutPosition(callout) {
+            if (!model) return;
+            
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            const dot = document.getElementById(`dot${callout.id}`);
+            
+            // Get point on the model
+            const targetPoint = callout.modelPoint.clone();
+            targetPoint.applyMatrix4(model.matrixWorld);
+            
+            // Project to screen coordinates
+            const vector = targetPoint.clone().project(camera);
+            const x1 = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y1 = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+            
+            // Position dot at model
+            dot.setAttribute('cx', x1);
+            dot.setAttribute('cy', y1);
+            
+            if (callout.staticBox) {
+                // Static box - keep position fixed
+                const boxX = callout.staticPosition.x;
+                const boxY = callout.staticPosition.y;
+                const boxWidth = callout.boxWidth || 250;
+                
+                // Calculate line connection point on box (always from inner edge)
+                let lineStartX, lineStartY;
+                if (callout.boxOffset === 'right') {
+                    // Line connects from LEFT edge of box (inner side for right-positioned box)
+                    lineStartX = boxX;
+                    lineStartY = boxY + 40; // Middle height of box
+                } else {
+                    // Line connects from RIGHT edge of box (inner side for left-positioned box)
+                    lineStartX = boxX + boxWidth; // Right edge
+                    lineStartY = boxY + 40;
+                }
+                
+                // Draw line from box edge to model point
+                line.setAttribute('x1', lineStartX);
+                line.setAttribute('y1', lineStartY);
+                line.setAttribute('x2', x1);
+                line.setAttribute('y2', y1);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (model && autoRotate) {
+                model.rotation.z += 0.003;
+            }
+            
+            // Update all callouts
+            callouts.forEach(callout => updateCalloutPosition(callout));
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update static box positions on resize
+            initializeStaticBoxes();
+        }
+
+        init();
+    </script>
+</body>
+</html>
