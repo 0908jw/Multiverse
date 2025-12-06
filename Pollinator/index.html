@@ -10,6 +10,53 @@
             padding: 0;
             box-sizing: border-box;
         }
+        #info-bar {
+position: absolute;
+left: 0;
+bottom: 0;
+width: 100%;
+box-sizing: border-box;
+padding: 14px 18px;
+background: linear-gradient(to top, #ff6a00, #ff9a3c 60%, rgba(255,255,255,0) 100%);
+font-size: 11px;
+color: #222;
+z-index: 200;
+pointer-events: auto;
+border-top: none;
+}
+
+#info-title {
+display: flex;
+align-items: center;
+gap: 6px;
+cursor: pointer;
+user-select: none;
+}
+
+#info-arrow {
+font-size: 12px;
+}
+
+#info-heading {
+font-weight: bold;
+letter-spacing: 0.03em;
+}
+
+#info-content {
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease;
+margin-top: 4px;
+}
+
+#info-bar.open #info-content {
+max-height: 120px;
+}
+
+#info-content p {
+margin: 0;
+line-height: 1.5;
+}
         body {
             font-family: Arial, sans-serif;
             overflow: hidden;
@@ -119,6 +166,7 @@
     </style>
 </head>
 <body>
+    <div id="info-bar"> <div id="info-title"> <span id="info-arrow">▸</span> <span id="info-heading">Honey Pollinator</span> </div> <div id="info-content"> <p> This hand pollination tool replaces bee labor with human labor inside detention centers, shifting a natural ecological role into a controlled system. </p> </div> </div>
     <img id="logo" src="logo.png" alt="Logo">
     <div id="container"></div>
     <div id="loading">Loading model...</div>
@@ -155,6 +203,17 @@
         let autoRotate = true;
         let mouseDown = false;
 
+
+        const infoBar = document.getElementById('info-bar')
+const infoTitle = document.getElementById('info-title')
+const infoArrow = document.getElementById('info-arrow')
+
+if (infoTitle) {
+infoTitle.addEventListener('click', function () {
+const isOpen = infoBar.classList.toggle('open')
+infoArrow.textContent = isOpen ? '▾' : '▸'
+})
+}
         // Define callout configurations
         const callouts = [
             {
