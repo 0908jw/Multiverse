@@ -304,7 +304,7 @@
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
                     const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 80 / maxDim; // Reduced from 100 to 80
+                    const scale = 60 / maxDim; 
                     model.scale.setScalar(scale);
 
                     scene.add(model);
