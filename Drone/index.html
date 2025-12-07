@@ -350,30 +350,30 @@
         const callouts = [
             {
                 id: 1,
-                modelPoint: new THREE.Vector3(30, 8, 0),
+                modelPoint: new THREE.Vector3(0, 20, 5),
                 staticBox: true,
                 staticPosition: { x: 100, y: 450 },
-                title: "Handle",
-                message: "The handle lets the worker manually sweep pollen across fields for long hours, replacing the natural movement of bees.",
+                title: "LED Mount Housing",
+                message: "The LED mounts held the lights that created the artificial constellations in polluted night skies.",
                 delay: 500
             },
             {
                 id: 2,
-                modelPoint: new THREE.Vector3(-40, -1, 0),
+                modelPoint: new THREE.Vector3(0, 30, -80),
                 boxOffset: 'right',
                 staticBox: true,
                 staticPosition: { x: null, y: 100 },
-                title: "Pollination Tip",
-                message: "The branching tips distribute pollen onto blossoms in place of a bee's fine motor precision, mimicking delicate contact through a crude mechanical form.",
+                title: "Central Navigation Core",
+                message: "The central body housed the sensors that controlled the drone’s movement and lighting patterns.",
                 delay: 1200
             },
             {
                 id: 3,
-                modelPoint: new THREE.Vector3(-3, -10, -15),
+                modelPoint: new THREE.Vector3(-300, 0, 100),
                 staticBox: true,
                 staticPosition: { x: 50, y: 150 },
-                title: "Central Chamber",
-                message: "The chamber stores and dispenses collected or synthetic pollen, controlling how much is released during hand-pollination.",
+                title: "Circular Propeller Guards",
+                message: "The circular guards protected the propellers and kept the drone steady while it hovered above homes.",
                 delay: 1900
             }
         ];
@@ -472,7 +472,7 @@
                     geometry.boundingBox.getCenter(center);
                     geometry.translate(-center.x, -center.y, -center.z);
 
-                    model.rotation.x = -Math.PI / 2;
+                    model.rotation.x = -Math.PI / 1.5;
                     
 
                     const size = new THREE.Vector3();
