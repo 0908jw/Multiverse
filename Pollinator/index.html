@@ -34,19 +34,20 @@
         }
 
         #info-arrow {
-            font-size: 12px;
+            font-size: 15px;
         }
 
         #info-heading {
             font-weight: bold;
             letter-spacing: 0.03em;
+            font-size: 15px;
         }
 
         #info-content {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
-            margin-top: 4px;
+            margin-top: 15px;
         }
 
         #info-bar.open #info-content {
@@ -75,8 +76,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
-            font-size: 20px;
+            color: rgb(0, 0, 0);
+            font-size: 13px;
             z-index: 50;
         }
         #logo {
@@ -160,6 +161,14 @@
             r: 6;
             fill: #ff8800;
         }
+        .line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            transition: stroke-dashoffset 0.8s ease-out;
+        }
+        .line.animate {
+            stroke-dashoffset: 0;
+        }
         .callout-box {
             position: absolute;
             background: rgba(255, 255, 255, 0.2);
@@ -237,9 +246,11 @@
     <div id="info-bar"> 
         <div id="info-title"> 
             <span id="info-arrow">▸</span> 
-            <span id="info-heading">Hand-Sweep Pollinator, 2057</span> 
+            <span id="info-heading">Hand-Sweep Pollinators</span> 
         </div> 
         <div id="info-content"> 
+            <p><i>Unknown manufacturer, 2057<br>
+                Plastic, nylon fiber, residual pollen, metal fasteners<br><br></i></p>
             <p> In the year 2043, bees went extinct. Immigration detention centers cooperate with agricultural sites where detainees labor in exchange for special judicial consideration. Immigrants hand-sweep pollen across farms to help orchards blossom into fruit. </p> 
         </div> 
     </div>
@@ -652,6 +663,10 @@
             
             calloutBox.style.opacity = '0';
             line.style.opacity = '0';
+            
+            // Reset line animation
+            line.classList.remove('animate');
+            
             callout.visible = false;
         }
 
@@ -676,6 +691,9 @@
             
             calloutBox.querySelector('h3').textContent = callout.title;
             line.style.opacity = '0.8';
+            
+            // Trigger line animation
+            line.classList.add('animate');
             
             setTimeout(() => {
                 calloutBox.style.opacity = '1';
@@ -712,19 +730,20 @@
                 const boxY = callout.staticPosition.y;
                 const boxWidth = callout.boxWidth || 250;
                 
-                let lineStartX, lineStartY;
+                let lineEndX, lineEndY;
                 if (callout.boxOffset === 'right') {
-                    lineStartX = boxX;
-                    lineStartY = boxY + 40;
+                    lineEndX = boxX;
+                    lineEndY = boxY + 40;
                 } else {
-                    lineStartX = boxX + boxWidth;
-                    lineStartY = boxY + 40;
+                    lineEndX = boxX + boxWidth;
+                    lineEndY = boxY + 40;
                 }
                 
-                line.setAttribute('x1', lineStartX);
-                line.setAttribute('y1', lineStartY);
-                line.setAttribute('x2', x1);
-                line.setAttribute('y2', y1);
+                // 점에서 박스로 (x1, y1 -> lineEndX, lineEndY)
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', lineEndX);
+                line.setAttribute('y2', lineEndY);
             }
         }
 
