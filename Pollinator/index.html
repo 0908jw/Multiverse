@@ -11,65 +11,65 @@
             box-sizing: border-box;
         }
         #info-bar {
-position: absolute;
-left: 0;
-bottom: 0;
-width: 100%;
-box-sizing: border-box;
-padding: 14px 18px;
-background: linear-gradient(to top, #ff6a00, #ff9a3c 60%, rgba(255,255,255,0) 100%);
-font-size: 12px;
-color: #222;
-z-index: 200;
-pointer-events: auto;
-border-top: none;
-}
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 14px 18px;
+            background: linear-gradient(to top, #ff6a00, #ff9a3c 60%, rgba(255,255,255,0) 100%);
+            font-size: 12px;
+            color: #222;
+            z-index: 200;
+            pointer-events: auto;
+            border-top: none;
+        }
 
-#info-title {
-display: flex;
-align-items: center;
-gap: 6px;
-cursor: pointer;
-user-select: none;
-}
+        #info-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
 
-#info-arrow {
-font-size: 12px;
-}
+        #info-arrow {
+            font-size: 12px;
+        }
 
-#info-heading {
-font-weight: bold;
-letter-spacing: 0.03em;
-}
+        #info-heading {
+            font-weight: bold;
+            letter-spacing: 0.03em;
+        }
 
-#info-content {
-max-height: 0;
-overflow: hidden;
-transition: max-height 0.3s ease;
-margin-top: 4px;
-}
+        #info-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            margin-top: 4px;
+        }
 
-#info-bar.open #info-content {
-max-height: 120px;
-}
+        #info-bar.open #info-content {
+            max-height: 120px;
+        }
 
-#info-content p {
-margin: 0;
-line-height: 1.5;
-}
+        #info-content p {
+            margin: 0;
+            line-height: 1.5;
+        }
         body {
             font-family: Arial, sans-serif;
             overflow: hidden;
             background: #a2a2a2;
         }
         #container {
-position: fixed;
-top: 0;
-left: 0;
-width: 100vw;
-height: 100dvh;
-z-index: 0;
-}
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100dvh;
+            z-index: 0;
+        }
         #loading {
             position: absolute;
             top: 50%;
@@ -86,6 +86,61 @@ z-index: 0;
             max-width: 200px;
             max-height: 80px;
             z-index: 100;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        #logo:hover {
+            opacity: 0.8;
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 300;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        #overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #overlay-content {
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #overlay-logo {
+            max-width: 300px;
+            max-height: 120px;
+            margin-bottom: 30px;
+        }
+        #overlay-text {
+            color: white;
+            font-size: 13px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        #close-overlay {
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border: 1px solid white;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        #close-overlay:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
         #callout-line {
             position: absolute;
@@ -154,6 +209,16 @@ z-index: 0;
                 font-size: 8px;
                 line-height: 1.4;
             }
+            #overlay-content {
+                padding: 30px 20px;
+            }
+            #overlay-logo {
+                max-width: 200px;
+                margin-bottom: 20px;
+            }
+            #overlay-text {
+                font-size: 14px;
+            }
         }
         .callout-box h3 {
             margin: 0 0 10px 0;
@@ -169,7 +234,28 @@ z-index: 0;
     </style>
 </head>
 <body>
-    <div id="info-bar"> <div id="info-title"> <span id="info-arrow">▸</span> <span id="info-heading">Hand Pollinator</span> </div> <div id="info-content"> <p> In the year 2043, bees went extinct. Immigration detention centers cooperate with agricultural sites where detainees labor in exchange for special judicial consideration. Immigrants hand-sweep pollen across farms to help orchards blossom into fruit. </p> </div> </div>
+    <div id="info-bar"> 
+        <div id="info-title"> 
+            <span id="info-arrow">▸</span> 
+            <span id="info-heading">Hand-Sweep Pollinator, 2057</span> 
+        </div> 
+        <div id="info-content"> 
+            <p> In the year 2043, bees went extinct. Immigration detention centers cooperate with agricultural sites where detainees labor in exchange for special judicial consideration. Immigrants hand-sweep pollen across farms to help orchards blossom into fruit. </p> 
+        </div> 
+    </div>
+    
+    <div id="overlay">
+        <div id="overlay-content">
+            <img id="overlay-logo" src="Logowhite.png" alt="Logo">
+            <div id="overlay-text">
+                <b>12.26 – 31, 2107</b><br><br>
+                <i>What Was Once There</i> was created in partnership with the British Museum as an archaeological effort to preserve the events that unfolded after the 21st century. Drawn from a collection of objects and cultural artifacts dated between 2000 and 2100, <i>What Was Once There</i> marks the arrival of a new century with its first exhibition.
+
+            </div>
+            <div id="close-overlay">Back to viewing</div>
+        </div>
+    </div>
+    
     <img id="logo" src="logo.png" alt="Logo">
     <div id="container"></div>
     <div id="loading">Loading model...</div>
@@ -206,17 +292,40 @@ z-index: 0;
         let autoRotate = true;
         let mouseDown = false;
 
-
         const infoBar = document.getElementById('info-bar')
-const infoTitle = document.getElementById('info-title')
-const infoArrow = document.getElementById('info-arrow')
+        const infoTitle = document.getElementById('info-title')
+        const infoArrow = document.getElementById('info-arrow')
+        const logo = document.getElementById('logo')
+        const overlay = document.getElementById('overlay')
+        const closeOverlay = document.getElementById('close-overlay')
 
-if (infoTitle) {
-infoTitle.addEventListener('click', function () {
-const isOpen = infoBar.classList.toggle('open')
-infoArrow.textContent = isOpen ? '▾' : '▸'
-})
-}
+        if (infoTitle) {
+            infoTitle.addEventListener('click', function () {
+                const isOpen = infoBar.classList.toggle('open')
+                infoArrow.textContent = isOpen ? '▾' : '▸'
+            })
+        }
+
+        if (logo) {
+            logo.addEventListener('click', function () {
+                overlay.classList.add('show')
+            })
+        }
+
+        if (closeOverlay) {
+            closeOverlay.addEventListener('click', function () {
+                overlay.classList.remove('show')
+            })
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show')
+                }
+            })
+        }
+
         // Define callout configurations
         const callouts = [
             {
@@ -233,7 +342,7 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                 modelPoint: new THREE.Vector3(-40, -1, 0),
                 boxOffset: 'right',
                 staticBox: true,
-                staticPosition: { x: null, y: 100 }, // Will calculate x dynamically
+                staticPosition: { x: null, y: 100 },
                 title: "Pollination Tip",
                 message: "The branching tips distribute pollen onto blossoms in place of a bee's fine motor precision, mimicking delicate contact through a crude mechanical form.",
                 delay: 1200
@@ -260,24 +369,21 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                 if (callout.staticBox) {
                     const calloutBox = document.getElementById(`callout-box-${callout.id}`);
                     
-                    // Calculate position for right-aligned boxes
                     if (callout.boxOffset === 'right' && callout.staticPosition.x === null) {
                         callout.staticPosition.x = window.innerWidth - rightOffset;
                     }
                     
-                    // Adjust positions for mobile
                     let x = callout.staticPosition.x;
                     let y = callout.staticPosition.y;
                     
                     if (isMobile) {
-                        // Adjust positions for smaller screens
-                        if (callout.id === 1) { // Handle
+                        if (callout.id === 1) {
                             x = 80;
                             y = window.innerHeight - 200;
-                        } else if (callout.id === 2) { // Pollination Tip
+                        } else if (callout.id === 2) {
                             x = window.innerWidth - 170;
                             y = 80;
-                        } else if (callout.id === 3) { // Central Chamber
+                        } else if (callout.id === 3) {
                             x = 20;
                             y = 120;
                         }
@@ -294,11 +400,9 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
         }
 
         function init() {
-            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xa3a3a3);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(
                 45,
                 window.innerWidth / window.innerHeight,
@@ -307,13 +411,11 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             );
             camera.position.set(0, 0, 150);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('container').appendChild(renderer.domElement);
 
-            // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
 
@@ -325,19 +427,11 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             directionalLight2.position.set(-5, -10, -7);
             scene.add(directionalLight2);
 
-            // Manual controls
             setupControls();
-
-            // Initialize static box positions
             initializeStaticBoxes();
-
-            // Load STL
             loadSTL();
 
-            // Handle window resize
             window.addEventListener('resize', onWindowResize);
-
-            // Start animation
             animate();
         }
 
@@ -353,16 +447,13 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
 
                     model = new THREE.Mesh(geometry, material);
 
-                    // Center the model
                     geometry.computeBoundingBox();
                     const center = new THREE.Vector3();
                     geometry.boundingBox.getCenter(center);
                     geometry.translate(-center.x, -center.y, -center.z);
 
-                    // rotate model
                     model.rotation.x = -Math.PI / 2;
 
-                    // Scale to fit view
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
                     const maxDim = Math.max(size.x, size.y, size.z);
@@ -372,7 +463,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                     scene.add(model);
                     document.getElementById('loading').style.display = 'none';
                     
-                    // Show dots immediately but keep callouts hidden
                     callouts.forEach(callout => {
                         const dot = document.getElementById(`dot${callout.id}`);
                         setTimeout(() => {
@@ -380,7 +470,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                         }, callout.delay);
                     });
                     
-                    // Setup click handlers for dots
                     setupDotClickHandlers();
                 },
                 function (xhr) {
@@ -393,7 +482,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             );
         }
 
-        // STL Loader implementation
         THREE.STLLoader = function () {};
         THREE.STLLoader.prototype = {
             load: function (url, onLoad, onProgress, onError) {
@@ -481,7 +569,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             let rotationX = 0, rotationY = 0;
             let distance = camera.position.z;
 
-            // Mouse events
             renderer.domElement.addEventListener('mousedown', e => {
                 mouseDown = true;
                 prevX = e.clientX;
@@ -503,7 +590,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             renderer.domElement.addEventListener('mouseup', () => mouseDown = false);
             renderer.domElement.addEventListener('mouseleave', () => mouseDown = false);
 
-            // Touch events
             renderer.domElement.addEventListener('touchstart', e => {
                 if (e.touches.length === 1) {
                     mouseDown = true;
@@ -527,7 +613,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
 
             renderer.domElement.addEventListener('touchend', () => mouseDown = false);
 
-            // Zoom
             renderer.domElement.addEventListener('wheel', e => {
                 e.preventDefault();
                 distance += e.deltaY * 0.1;
@@ -536,7 +621,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             });
         }
 
-        // Setup click handlers for dots
         function setupDotClickHandlers() {
             callouts.forEach(callout => {
                 const dot = document.getElementById(`dot${callout.id}`);
@@ -546,7 +630,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                     toggleCallout(callout);
                 });
                 
-                // Touch support for mobile
                 dot.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -555,7 +638,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             });
         }
 
-        // Toggle callout visibility
         function toggleCallout(callout) {
             if (callout.visible) {
                 hideCallout(callout);
@@ -564,7 +646,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             }
         }
 
-        // Hide callout
         function hideCallout(callout) {
             const calloutBox = document.getElementById(`callout-box-${callout.id}`);
             const line = document.getElementById(`line${callout.id}`);
@@ -574,7 +655,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             callout.visible = false;
         }
 
-        // Typewriter effect
         function typeWriter(text, element, speed = 50) {
             let i = 0;
             element.textContent = '';
@@ -589,24 +669,18 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             type();
         }
 
-        // Show callout with animation
         function showCallout(callout) {
             const calloutBox = document.getElementById(`callout-box-${callout.id}`);
             const line = document.getElementById(`line${callout.id}`);
             const typewriterText = document.getElementById(`typewriter-text-${callout.id}`);
             
-            // Update title
             calloutBox.querySelector('h3').textContent = callout.title;
-            
-            // Fade in line
             line.style.opacity = '0.8';
             
-            // Fade in box
             setTimeout(() => {
                 calloutBox.style.opacity = '1';
             }, 300);
             
-            // Start typewriter effect only if not already typed
             if (typewriterText.textContent === '') {
                 setTimeout(() => {
                     typeWriter(callout.message, typewriterText, 30);
@@ -616,7 +690,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             callout.visible = true;
         }
 
-        // Update callout position to follow model
         function updateCalloutPosition(callout) {
             if (!model) return;
             
@@ -624,38 +697,30 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             const line = document.getElementById(`line${callout.id}`);
             const dot = document.getElementById(`dot${callout.id}`);
             
-            // Get point on the model
             const targetPoint = callout.modelPoint.clone();
             targetPoint.applyMatrix4(model.matrixWorld);
             
-            // Project to screen coordinates
             const vector = targetPoint.clone().project(camera);
             const x1 = (vector.x * 0.5 + 0.5) * window.innerWidth;
             const y1 = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
             
-            // Position dot at model
             dot.setAttribute('cx', x1);
             dot.setAttribute('cy', y1);
             
             if (callout.staticBox) {
-                // Static box - keep position fixed
                 const boxX = callout.staticPosition.x;
                 const boxY = callout.staticPosition.y;
                 const boxWidth = callout.boxWidth || 250;
                 
-                // Calculate line connection point on box (always from inner edge)
                 let lineStartX, lineStartY;
                 if (callout.boxOffset === 'right') {
-                    // Line connects from LEFT edge of box (inner side for right-positioned box)
                     lineStartX = boxX;
-                    lineStartY = boxY + 40; // Middle height of box
+                    lineStartY = boxY + 40;
                 } else {
-                    // Line connects from RIGHT edge of box (inner side for left-positioned box)
-                    lineStartX = boxX + boxWidth; // Right edge
+                    lineStartX = boxX + boxWidth;
                     lineStartY = boxY + 40;
                 }
                 
-                // Draw line from box edge to model point
                 line.setAttribute('x1', lineStartX);
                 line.setAttribute('y1', lineStartY);
                 line.setAttribute('x2', x1);
@@ -670,7 +735,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
                 model.rotation.z += 0.003;
             }
             
-            // Update all callouts
             callouts.forEach(callout => updateCalloutPosition(callout));
 
             renderer.render(scene, camera);
@@ -680,8 +744,6 @@ infoArrow.textContent = isOpen ? '▾' : '▸'
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            
-            // Update static box positions on resize
             initializeStaticBoxes();
         }
 
