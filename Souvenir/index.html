@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        #info-bar {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px 18px 0px 18px;
+            background: linear-gradient(to top, #ff6a00, #ff9a3c 50%, rgba(255,255,255,0) 100%);
+            font-size: 12px;
+            color: #222;
+            z-index: 200;
+            pointer-events: auto;
+            border-top: none;
+            transition: padding 0.3s ease;
+        }
+        
+        #info-bar.open {
+            padding: 16px 18px;
+            background: linear-gradient(to top, #ff6a00, #ff9a3c 50%, rgba(255,255,255,0) 100%);
+        }
+
+        #info-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #info-arrow {
+            font-size: 15px;
+        }
+
+        #info-heading {
+            font-weight: bold;
+            letter-spacing: 0.03em;
+            font-size: 15px;
+        }
+
+        #info-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            margin-top: 15px;
+        }
+
+        #info-bar.open #info-content {
+            max-height: 150px;
+        }
+
+        #info-content p {
+            margin: 0;
+            line-height: 1.5;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background: #a2a2a2;
+        }
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100dvh;
+            z-index: 0;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgb(0, 0, 0);
+            font-size: 13px;
+            z-index: 50;
+        }
+        #logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            max-width: 200px;
+            max-height: 80px;
+            z-index: 100;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        #logo:hover {
+            opacity: 0.8;
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 300;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        #overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #overlay-content {
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #overlay-logo {
+            max-width: 300px;
+            max-height: 120px;
+            margin-bottom: 30px;
+        }
+        #overlay-text {
+            color: white;
+            font-size: 13px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        #close-overlay {
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border: 1px solid white;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        #close-overlay:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #callout-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .dot {
+            cursor: pointer;
+            pointer-events: all;
+            transition: r 0.2s, fill 0.2s;
+        }
+        .dot:hover {
+            r: 6;
+            fill: #ff8800;
+        }
+        .line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            transition: stroke-dashoffset 0.8s ease-out;
+        }
+        .line.animate {
+            stroke-dashoffset: 0;
+        }
+        .callout-box {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 15px;
+            border: 1px solid black;
+            border-radius: 0px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            width: 250px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            transition: opacity 0.5s;
+            overflow: visible;
+            white-space: normal;
+        }
+        
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .callout-box {
+                width: 180px;
+                padding: 10px 12px;
+            }
+            .callout-box h3 {
+                font-size: 11px;
+                margin: 0 0 8px 0;
+            }
+            .typewriter-text {
+                font-size: 9px;
+                line-height: 1.5;
+            }
+            #logo {
+                max-width: 120px;
+                max-height: 50px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .callout-box {
+                width: 150px;
+                padding: 8px 10px;
+            }
+            .callout-box h3 {
+                font-size: 10px;
+                margin: 0 0 6px 0;
+            }
+            .typewriter-text {
+                font-size: 8px;
+                line-height: 1.4;
+            }
+            #overlay-content {
+                padding: 30px 20px;
+            }
+            #overlay-logo {
+                max-width: 200px;
+                margin-bottom: 20px;
+            }
+            #overlay-text {
+                font-size: 14px;
+            }
+        }
+        .callout-box h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 12px;
+        }
+        .typewriter-text {
+            margin: 0;
+            color: #666;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="info-bar"> 
+        <div id="info-title"> 
+            <span id="info-arrow">▸</span> 
+            <span id="info-heading">Welcome to Venice</span> 
+        </div> 
+        <div id="info-content"> 
+            <p><i>A flooded souvenir shop, 2057<br>
+                Ceramic<br><br></i></p>
+            <p> In the year 2058, Venice finally sank underwater. This object is a souvenir from the years before the collapse, later recovered from the submerged city. It recalls a time when tourism corporations, working with the Italian government, promoted an Underwater Experience through luxury submersible ferries whose glass floors revealed cathedral domes, algae-coated statues, and the drifting silhouettes of splintered gondolas as the sea levels rose.
+                 </p> 
+        </div> 
+    </div>
+    
+    <div id="overlay">
+        <div id="overlay-content">
+            <img id="overlay-logo" src="Logowhite.png" alt="Logo">
+            <div id="overlay-text">
+                <b>December 26 – 31, 2107</b><br><br>
+                <i>What Was Once There</i> was created in partnership with the British Museum as an archaeological effort to preserve the events that unfolded after the 21st century. Drawn from a collection of objects and cultural artifacts dated between 2000 and 2100, <i>What Was Once There</i> marks the arrival of a new century with its first exhibition.
+
+            </div>
+            <div id="close-overlay">Back to viewing</div>
+        </div>
+    </div>
+    
+    <img id="logo" src="logo.png" alt="Logo">
+    <div id="container"></div>
+    <div id="loading">Loading model...</div>
+    
+    <svg id="callout-line">
+        <line class="line" id="line1" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot1" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+        
+        <line class="line" id="line2" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot2" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+        
+        <line class="line" id="line3" x1="0" y1="0" x2="0" y2="0" stroke="black" stroke-width="1" opacity="0"/>
+        <circle class="dot" id="dot3" cx="0" cy="0" r="4" fill="black" opacity="0"/>
+    </svg>
+    
+    <div class="callout-box" id="callout-box-1">
+        <h3>Handle</h3>
+        <p class="typewriter-text" id="typewriter-text-1"></p>
+    </div>
+    
+    <div class="callout-box" id="callout-box-2">
+        <h3>Pollination Tip</h3>
+        <p class="typewriter-text" id="typewriter-text-2"></p>
+    </div>
+    
+    <div class="callout-box" id="callout-box-3">
+        <h3>Central Chamber</h3>
+        <p class="typewriter-text" id="typewriter-text-3"></p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, model;
+        let autoRotate = true;
+        let mouseDown = false;
+
+        const infoBar = document.getElementById('info-bar')
+        const infoTitle = document.getElementById('info-title')
+        const infoArrow = document.getElementById('info-arrow')
+        const logo = document.getElementById('logo')
+        const overlay = document.getElementById('overlay')
+        const closeOverlay = document.getElementById('close-overlay')
+
+        if (infoTitle) {
+            infoTitle.addEventListener('click', function () {
+                const isOpen = infoBar.classList.toggle('open')
+                infoArrow.textContent = isOpen ? '▾' : '▸'
+            })
+        }
+
+        if (logo) {
+            logo.addEventListener('click', function () {
+                overlay.classList.add('show')
+            })
+        }
+
+        if (closeOverlay) {
+            closeOverlay.addEventListener('click', function () {
+                overlay.classList.remove('show')
+            })
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('show')
+                }
+            })
+        }
+
+        // Define callout configurations
+        const callouts = [
+            {
+                id: 1,
+                modelPoint: new THREE.Vector3(-4, 0, 0),
+                staticBox: true,
+                staticPosition: { x: 100, y: 450 },
+                title: "Clustered Landmarks",
+                message: "The grouped monuments reflect how Italy was once condensed into collectible icons for tourists, a reminder of the city’s pre-collapse tourism economy.",
+                delay: 500
+            },
+            {
+                id: 2,
+                modelPoint: new THREE.Vector3(-5, 10, -30),
+                boxOffset: 'right',
+                staticBox: true,
+                staticPosition: { x: null, y: 100 },
+                title: "ITALIA Base",
+                message: "The labeled base identifies the miniature as a mass-produced souvenir, preserved as evidence of everyday travel culture before Venice sank.",
+                delay: 1900
+            },
+            {
+                id: 3,
+                modelPoint: new THREE.Vector3(-10, 0, -17),
+                staticBox: true,
+                staticPosition: { x: 50, y: 150 },
+                title: "Rialto Bridge and Gondola",
+                message: "This section captures Venice’s identity as a city built on water, making its later recovery from the seabed resonate with the object’s original imagery.",
+                delay: 1200
+            }
+        ];
+
+        // Initialize static box positions
+        function initializeStaticBoxes() {
+            const isMobile = window.innerWidth <= 768;
+            const isSmallMobile = window.innerWidth <= 480;
+            const boxWidth = isSmallMobile ? 150 : (isMobile ? 180 : 250);
+            const rightOffset = isMobile ? 200 : 320;
+            
+            callouts.forEach(callout => {
+                if (callout.staticBox) {
+                    const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+                    
+                    if (callout.boxOffset === 'right' && callout.staticPosition.x === null) {
+                        callout.staticPosition.x = window.innerWidth - rightOffset;
+                    }
+                    
+                    let x = callout.staticPosition.x;
+                    let y = callout.staticPosition.y;
+                    
+                    if (isMobile) {
+                        if (callout.id === 1) {
+                            x = 50;
+                            y = window.innerHeight - 200;
+                        } else if (callout.id === 2) {
+                            x = window.innerWidth - 170;
+                            y = 80;
+                        } else if (callout.id === 3) {
+                            x = 20;
+                            y = 120;
+                        }
+                    }
+                    
+                    callout.staticPosition.x = x;
+                    callout.staticPosition.y = y;
+                    callout.boxWidth = boxWidth;
+                    
+                    calloutBox.style.left = x + 'px';
+                    calloutBox.style.top = y + 'px';
+                }
+            });
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xa3a3a3);
+
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 150);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(5, 10, 7);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-5, -10, -7);
+            scene.add(directionalLight2);
+
+            setupControls();
+            initializeStaticBoxes();
+            loadSTL();
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function loadSTL() {
+            const loader = new THREE.STLLoader();
+            
+            loader.load(
+                'model.stl',
+                function (geometry) {
+                    const material = new THREE.MeshLambertMaterial({
+                        color: 0xff8800
+                    });
+
+                    model = new THREE.Mesh(geometry, material);
+
+                    geometry.computeBoundingBox();
+                    const center = new THREE.Vector3();
+                    geometry.boundingBox.getCenter(center);
+                    geometry.translate(-center.x, -center.y, -center.z);
+
+                    model.rotation.x = -Math.PI / 2;
+
+                    model.rotation.x = -Math.PI / 2;  // Up/down tilt
+model.rotation.z = Math.PI;       // Rotate 180 degrees to show front
+
+
+                    const size = new THREE.Vector3();
+                    geometry.boundingBox.getSize(size);
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 40 / maxDim; 
+                    model.scale.setScalar(scale);
+
+                    scene.add(model);
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    callouts.forEach(callout => {
+                        const dot = document.getElementById(`dot${callout.id}`);
+                        setTimeout(() => {
+                            dot.style.opacity = '1';
+                        }, callout.delay);
+                    });
+                    
+                    setupDotClickHandlers();
+                },
+                function (xhr) {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                function (error) {
+                    console.error('Error loading STL:', error);
+                    document.getElementById('loading').textContent = 'Error loading model. Check console.';
+                }
+            );
+        }
+
+        THREE.STLLoader = function () {};
+        THREE.STLLoader.prototype = {
+            load: function (url, onLoad, onProgress, onError) {
+                const loader = new THREE.FileLoader();
+                loader.setResponseType('arraybuffer');
+                loader.load(url, 
+                    buffer => {
+                        try {
+                            onLoad(this.parse(buffer));
+                        } catch (e) {
+                            if (onError) onError(e);
+                        }
+                    },
+                    onProgress,
+                    onError
+                );
+            },
+            parse: function (data) {
+                const isASCII = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(new Uint8Array(data, 0, 5)) === 'solid'
+                    : data.indexOf('solid') === 0;
+
+                return isASCII ? this.parseASCII(data) : this.parseBinary(data);
+            },
+            parseBinary: function (data) {
+                const reader = new DataView(data);
+                const faces = reader.getUint32(80, true);
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+
+                for (let face = 0; face < faces; face++) {
+                    const start = 84 + face * 50;
+                    const nx = reader.getFloat32(start, true);
+                    const ny = reader.getFloat32(start + 4, true);
+                    const nz = reader.getFloat32(start + 8, true);
+
+                    for (let i = 0; i < 3; i++) {
+                        const vx = reader.getFloat32(start + 12 + i * 12, true);
+                        const vy = reader.getFloat32(start + 16 + i * 12, true);
+                        const vz = reader.getFloat32(start + 20 + i * 12, true);
+                        vertices.push(vx, vy, vz);
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            },
+            parseASCII: function (data) {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+                const text = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(data) 
+                    : data;
+                
+                const patternFace = /facet\s+normal\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+outer\s+loop\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)/g;
+                
+                let result;
+                while ((result = patternFace.exec(text)) !== null) {
+                    const nx = parseFloat(result[1]);
+                    const ny = parseFloat(result[3]);
+                    const nz = parseFloat(result[5]);
+                    
+                    for (let i = 0; i < 3; i++) {
+                        vertices.push(
+                            parseFloat(result[7 + i * 6]),
+                            parseFloat(result[9 + i * 6]),
+                            parseFloat(result[11 + i * 6])
+                        );
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            }
+        };
+
+        function setupControls() {
+            let prevX = 0, prevY = 0;
+            let rotationX = 0, rotationY = 0;
+            let distance = camera.position.z;
+
+            renderer.domElement.addEventListener('mousedown', e => {
+                mouseDown = true;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('mousemove', e => {
+                if (!mouseDown || !model) return;
+                const dx = e.clientX - prevX;
+                const dy = e.clientY - prevY;
+                rotationY += dx * 0.005;
+                rotationX += dy * 0.005;
+                model.rotation.y = rotationY;
+                model.rotation.x = rotationX;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => mouseDown = false);
+            renderer.domElement.addEventListener('mouseleave', () => mouseDown = false);
+
+            renderer.domElement.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    mouseDown = true;
+                    prevX = e.touches[0].clientX;
+                    prevY = e.touches[0].clientY;
+                }
+            });
+
+            renderer.domElement.addEventListener('touchmove', e => {
+                if (e.touches.length === 1 && mouseDown && model) {
+                    const dx = e.touches[0].clientX - prevX;
+                    const dy = e.touches[0].clientY - prevY;
+                    rotationY += dx * 0.005;
+                    rotationX += dy * 0.005;
+                    model.rotation.y = rotationY;
+                    model.rotation.x = rotationX;
+                    prevX = e.touches[0].clientX;
+                    prevY = e.touches[0].clientY;
+                }
+            });
+
+            renderer.domElement.addEventListener('touchend', () => mouseDown = false);
+
+            renderer.domElement.addEventListener('wheel', e => {
+                e.preventDefault();
+                distance += e.deltaY * 0.1;
+                distance = Math.max(50, Math.min(500, distance));
+                camera.position.z = distance;
+            });
+        }
+
+        function setupDotClickHandlers() {
+            callouts.forEach(callout => {
+                const dot = document.getElementById(`dot${callout.id}`);
+                
+                dot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleCallout(callout);
+                });
+                
+                dot.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleCallout(callout);
+                });
+            });
+        }
+
+        function toggleCallout(callout) {
+            if (callout.visible) {
+                hideCallout(callout);
+            } else {
+                showCallout(callout);
+            }
+        }
+
+        function hideCallout(callout) {
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            
+            calloutBox.style.opacity = '0';
+            line.style.opacity = '0';
+            
+            // Reset line animation
+            line.classList.remove('animate');
+            
+            callout.visible = false;
+        }
+
+        function typeWriter(text, element, speed = 50) {
+            let i = 0;
+            element.textContent = '';
+            
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+
+        function showCallout(callout) {
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            const typewriterText = document.getElementById(`typewriter-text-${callout.id}`);
+            
+            calloutBox.querySelector('h3').textContent = callout.title;
+            line.style.opacity = '0.8';
+            
+            // Trigger line animation
+            line.classList.add('animate');
+            
+            setTimeout(() => {
+                calloutBox.style.opacity = '1';
+            }, 300);
+            
+            if (typewriterText.textContent === '') {
+                setTimeout(() => {
+                    typeWriter(callout.message, typewriterText, 30);
+                }, 500);
+            }
+            
+            callout.visible = true;
+        }
+
+        function updateCalloutPosition(callout) {
+            if (!model) return;
+            
+            const calloutBox = document.getElementById(`callout-box-${callout.id}`);
+            const line = document.getElementById(`line${callout.id}`);
+            const dot = document.getElementById(`dot${callout.id}`);
+            
+            const targetPoint = callout.modelPoint.clone();
+            targetPoint.applyMatrix4(model.matrixWorld);
+            
+            const vector = targetPoint.clone().project(camera);
+            const x1 = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y1 = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+            
+            dot.setAttribute('cx', x1);
+            dot.setAttribute('cy', y1);
+            
+            if (callout.staticBox) {
+                const boxX = callout.staticPosition.x;
+                const boxY = callout.staticPosition.y;
+                const boxWidth = callout.boxWidth || 250;
+                
+                let lineEndX, lineEndY;
+                if (callout.boxOffset === 'right') {
+                    lineEndX = boxX;
+                    lineEndY = boxY + 40;
+                } else {
+                    lineEndX = boxX + boxWidth;
+                    lineEndY = boxY + 40;
+                }
+                
+                // 점에서 박스로 (x1, y1 -> lineEndX, lineEndY)
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', lineEndX);
+                line.setAttribute('y2', lineEndY);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (model && autoRotate) {
+                model.rotation.z += 0.003;
+            }
+            
+            callouts.forEach(callout => updateCalloutPosition(callout));
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            initializeStaticBoxes();
+        }
+
+        init();
+    </script>
+</body>
+</html>
