@@ -18,7 +18,7 @@
             width: 100%;
             box-sizing: border-box;
             padding: 16px 18px 0px 18px;
-            background: linear-gradient(to top, #ff6a00, #ff9a3c 50%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to top, #ff5500, #ff8547 50%, rgba(255,255,255,0) 100%);
             font-size: 12px;
             color: #222;
             z-index: 200;
@@ -29,7 +29,7 @@
         
         #info-bar.open {
             padding: 16px 18px;
-            background: linear-gradient(to top, #ff6a00, #ff9a3c 50%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to top, #ff5500, #ff8547 50%, rgba(255,255,255,0) 100%);
         }
 
         #info-title {
@@ -166,7 +166,7 @@
         }
         .dot:hover {
             r: 6;
-            fill: #ff8800;
+            fill: #ff5500;
         }
         .line {
             stroke-dasharray: 1000;
@@ -270,7 +270,7 @@
             <img id="overlay-logo" src="Logowhite.png" alt="Logo">
             <div id="overlay-text">
                 <b>December 26 – 31, 2107</b><br><br>
-                <i>What Was Once There</i> was created in partnership with the British Museum as an archaeological effort to preserve the events that unfolded after the 21st century. Drawn from a collection of objects and cultural artifacts dated between 2000 and 2100, <i>What Was Once There</i> marks the arrival of a new century with its first exhibition.
+                With the turn of the 22nd century, <i>What Was Once There</i> is an archaeological exhibition curating the historical turn of events that unfolded after the 21st century. Drawn from a collection of objects and cultural artifacts dated between 2000 and 2100, each artifact pinpoints a cornerstone of the past that lead to our current present.
 
             </div>
             <div id="close-overlay">Back to viewing</div>
@@ -463,7 +463,7 @@
                 'tank.stl',
                 function (geometry) {
                     const material = new THREE.MeshLambertMaterial({
-                        color: 0xff8800
+                        color: 0xff7000
                     });
 
                     model = new THREE.Mesh(geometry, material);
