@@ -253,12 +253,15 @@
     <div id="info-bar"> 
         <div id="info-title"> 
             <span id="info-arrow">▸</span> 
-            <span id="info-heading">Hand-Sweep Pollinators</span> 
+            <span id="info-heading">A Man's Drinking Pipe</span> 
         </div> 
         <div id="info-content"> 
-            <p><i>Unknown manufacturer, 2057<br>
-                Plastic, nylon fiber, residual pollen, metal fasteners<br><br></i></p>
-            <p> In the year 2043, bees went extinct. Immigration detention centers cooperate with agricultural sites where detainees labor in exchange for special judicial consideration. Immigrants hand-sweep pollen across farms to help orchards blossom into fruit. </p> 
+            <p><i>Decommissioned data center, 2078<br>
+                Cast metal with pipes, valves, and meters<br>
+                16.5 x 11 x 4.7 in
+                <br><br></i></p>
+            <p> Due to limited drinkable water shortages, a man hunches over the dripping pipe connected to the nearest data center. The water used to cool the supercomputers is filled with biocides and chemicals. He leans over the metallic pipe, and the droplets of water hit his tongue anyway.
+            </p> 
         </div> 
     </div>
     
@@ -348,31 +351,31 @@
         const callouts = [
             {
                 id: 1,
-                modelPoint: new THREE.Vector3(30, 8, 0),
+                modelPoint: new THREE.Vector3(0, 8, 20),
                 staticBox: true,
                 staticPosition: { x: 100, y: 450 },
-                title: "Handle",
-                message: "The handle lets the worker manually sweep pollen across fields for long hours, replacing the natural movement of bees.",
-                delay: 500
-            },
-            {
-                id: 2,
-                modelPoint: new THREE.Vector3(-40, -1, 0),
-                boxOffset: 'right',
-                staticBox: true,
-                staticPosition: { x: null, y: 100 },
-                title: "Pollination Tip",
-                message: "The branching tips distribute pollen onto blossoms in place of a bee's fine motor precision, mimicking delicate contact through a crude mechanical form.",
+                title: "Cooling Pipes and Valves",
+                message: "These pipes and valves moved water through the system to keep the data center’s servers from overheating.",
                 delay: 1200
             },
             {
+                id: 2,
+                modelPoint: new THREE.Vector3(-10, 50, 30),
+                boxOffset: 'right',
+                staticBox: true,
+                staticPosition: { x: null, y: 100 },
+                title: "Corroded Surface Layer",
+                message: "The damaged, uneven surface preserves signs of chemical residue and decay, evidence that the water circulating through the tank was toxic yet still sought out by people with no clean supply.",
+                delay: 1900
+            },
+            {
                 id: 3,
-                modelPoint: new THREE.Vector3(-3, -10, -15),
+                modelPoint: new THREE.Vector3(5, -25, -10),
                 staticBox: true,
                 staticPosition: { x: 50, y: 150 },
-                title: "Central Chamber",
-                message: "The chamber stores and dispenses collected or synthetic pollen, controlling how much is released during hand-pollination.",
-                delay: 1900
+                title: "Main Tank Body",
+                message: "The tank body held the primary supply of coolant water, where heat and chemical residue collected during the data center’s operation.",
+                delay: 500
             }
         ];
 
@@ -475,7 +478,7 @@
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
                     const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 60 / maxDim; 
+                    const scale = 50 / maxDim; 
                     model.scale.setScalar(scale);
 
                     scene.add(model);
