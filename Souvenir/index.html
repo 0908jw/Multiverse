@@ -58,7 +58,7 @@
         }
 
         #info-bar.open #info-content {
-            max-height: 200px;
+            max-height: 300px;
         }
 
         #info-content p {
@@ -348,7 +348,7 @@
 
         // Define callout configurations
         const callouts = [
-            {
+        {
                 id: 1,
                 modelPoint: new THREE.Vector3(-4, 0, 0),
                 staticBox: true,
@@ -398,7 +398,7 @@
                     
                     if (isMobile) {
                         if (callout.id === 1) {
-                            x = 50;
+                            x = 80;
                             y = window.innerHeight - 200;
                         } else if (callout.id === 2) {
                             x = window.innerWidth - 170;
@@ -459,7 +459,7 @@
             const loader = new THREE.STLLoader();
             
             loader.load(
-                'souvenir.stl',
+                'tank.stl',
                 function (geometry) {
                     const material = new THREE.MeshLambertMaterial({
                         color: 0xff8800
@@ -474,14 +474,10 @@
 
                     model.rotation.x = -Math.PI / 2;
 
-                    model.rotation.x = -Math.PI / 2;  // Up/down tilt
-model.rotation.z = Math.PI;       // Rotate 180 degrees to show front
-
-
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
                     const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 40 / maxDim; 
+                    const scale = 50 / maxDim; 
                     model.scale.setScalar(scale);
 
                     scene.add(model);
