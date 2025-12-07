@@ -457,7 +457,7 @@
             const loader = new THREE.STLLoader();
             
             loader.load(
-                'model.stl',
+                'drone.stl',
                 function (geometry) {
                     const material = new THREE.MeshLambertMaterial({
                         color: 0xff8800
@@ -471,6 +471,7 @@
                     geometry.translate(-center.x, -center.y, -center.z);
 
                     model.rotation.x = -Math.PI / 2;
+                    
 
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
