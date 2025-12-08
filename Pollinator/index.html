@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model Viewer</title>
+    <title>Hand-Sweep Pollinator</title>
     <style>
         * {
             margin: 0;
@@ -355,7 +355,7 @@
                 staticPosition: { x: 100, y: 450 },
                 title: "Handle",
                 message: "The handle lets the worker manually sweep pollen across fields for long hours, replacing the natural movement of bees.",
-                delay: 500
+                delay: 2000
             },
             {
                 id: 2,
@@ -365,7 +365,7 @@
                 staticPosition: { x: null, y: 100 },
                 title: "Pollination Tip",
                 message: "The branching tips distribute pollen onto blossoms in place of a bee's fine motor precision, mimicking delicate contact through a crude mechanical form.",
-                delay: 1200
+                delay: 3500
             },
             {
                 id: 3,
@@ -374,7 +374,7 @@
                 staticPosition: { x: 50, y: 150 },
                 title: "Central Chamber",
                 message: "The chamber stores and dispenses collected or synthetic pollen, controlling how much is released during hand-pollination.",
-                delay: 1900
+                delay: 5000
             }
         ];
 
@@ -477,16 +477,21 @@
                     const size = new THREE.Vector3();
                     geometry.boundingBox.getSize(size);
                     const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 60 / maxDim; 
+                    const scale = 60 / maxDim;
                     model.scale.setScalar(scale);
 
                     scene.add(model);
                     document.getElementById('loading').style.display = 'none';
                     
+                    // Show dots and callouts automatically with delays
                     callouts.forEach(callout => {
                         const dot = document.getElementById(`dot${callout.id}`);
                         setTimeout(() => {
                             dot.style.opacity = '1';
+                            // Auto-show callout after dot appears (slower)
+                            setTimeout(() => {
+                                showCallout(callout);
+                            }, 600);
                         }, callout.delay);
                     });
                     
