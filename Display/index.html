@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo with 3D Models</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background: #a2a2a2;
+        }
+        
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+        
+        #content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            text-align: center;
+        }
+        
+        #logo {
+            max-width: 500px;
+            width: 80vw;
+            height: auto;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333;
+            font-size: 14px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="loading">Loading models...</div>
+    <div id="content">
+        <img id="logo" src="logo.png" alt="Logo">
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let models = [];
+        const modelConfigs = [
+            { 
+                file: 'pollinator.stl', 
+                color: 0xff5500,
+                position: { x: -130, y: 40, z: -150 },
+                scale: 200,
+                rotation: { x: -Math.PI / 2, y: 0, z: 0 }
+            },
+            { 
+                file: 'drone.stl', 
+                color: 0xff5500,
+                position: { x: 130, y: -50, z: -200 },
+                scale: 230,
+                rotation: { x: -Math.PI / 1.5, y: 0, z: 0 }
+            },
+            { 
+                file: 'souvenir.stl', 
+                color: 0xff5500,
+                position: { x: -60, y: -70, z: -200 },
+                scale: 150,
+                rotation: { x: -Math.PI / 2, y: 0, z: Math.PI }
+            },
+            { 
+                file: 'tank.stl', 
+                color: 0xff5500,
+                position: { x: 90, y: 50, z: -220 },
+                scale: 190,
+                rotation: { x: -Math.PI / 2, y: 0, z: 0 }
+            }
+        ];
+        
+        let modelsLoaded = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xa3a3a3);
+
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 150);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight1.position.set(5, 10, 7);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-5, -10, -7);
+            scene.add(directionalLight2);
+
+            loadModels();
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function loadModels() {
+            const loader = new THREE.STLLoader();
+            
+            modelConfigs.forEach((config, index) => {
+                loader.load(
+                    config.file,
+                    function (geometry) {
+                        const material = new THREE.MeshLambertMaterial({
+                            color: config.color,
+                        });
+
+                        const mesh = new THREE.Mesh(geometry, material);
+
+                        geometry.computeBoundingBox();
+                        const center = new THREE.Vector3();
+                        geometry.boundingBox.getCenter(center);
+                        geometry.translate(-center.x, -center.y, -center.z);
+
+                        mesh.rotation.set(config.rotation.x, config.rotation.y, config.rotation.z);
+
+                        const size = new THREE.Vector3();
+                        geometry.boundingBox.getSize(size);
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = config.scale / maxDim;
+                        mesh.scale.setScalar(scale);
+
+                        mesh.position.set(config.position.x, config.position.y, config.position.z);
+
+                        // Store rotation speeds
+                        mesh.userData.rotationSpeed = {
+                            x: (Math.random() - 0.5) * 0.002,
+                            y: (Math.random() - 0.5) * 0.002,
+                            z: (Math.random() - 0.5) * 0.003
+                        };
+
+                        scene.add(mesh);
+                        models.push(mesh);
+                        
+                        modelsLoaded++;
+                        if (modelsLoaded === modelConfigs.length) {
+                            document.getElementById('loading').style.display = 'none';
+                        }
+                    },
+                    function (xhr) {
+                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    },
+                    function (error) {
+                        console.error('Error loading model:', error);
+                        modelsLoaded++;
+                        if (modelsLoaded === modelConfigs.length) {
+                            document.getElementById('loading').style.display = 'none';
+                        }
+                    }
+                );
+            });
+        }
+
+        THREE.STLLoader = function () {};
+        THREE.STLLoader.prototype = {
+            load: function (url, onLoad, onProgress, onError) {
+                const loader = new THREE.FileLoader();
+                loader.setResponseType('arraybuffer');
+                loader.load(url, 
+                    buffer => {
+                        try {
+                            onLoad(this.parse(buffer));
+                        } catch (e) {
+                            if (onError) onError(e);
+                        }
+                    },
+                    onProgress,
+                    onError
+                );
+            },
+            parse: function (data) {
+                const isASCII = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(new Uint8Array(data, 0, 5)) === 'solid'
+                    : data.indexOf('solid') === 0;
+
+                return isASCII ? this.parseASCII(data) : this.parseBinary(data);
+            },
+            parseBinary: function (data) {
+                const reader = new DataView(data);
+                const faces = reader.getUint32(80, true);
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+
+                for (let face = 0; face < faces; face++) {
+                    const start = 84 + face * 50;
+                    const nx = reader.getFloat32(start, true);
+                    const ny = reader.getFloat32(start + 4, true);
+                    const nz = reader.getFloat32(start + 8, true);
+
+                    for (let i = 0; i < 3; i++) {
+                        const vx = reader.getFloat32(start + 12 + i * 12, true);
+                        const vy = reader.getFloat32(start + 16 + i * 12, true);
+                        const vz = reader.getFloat32(start + 20 + i * 12, true);
+                        vertices.push(vx, vy, vz);
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            },
+            parseASCII: function (data) {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+                const text = (data instanceof ArrayBuffer) 
+                    ? new TextDecoder().decode(data) 
+                    : data;
+                
+                const patternFace = /facet\s+normal\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+outer\s+loop\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+vertex\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)\s+([-+]?\d+\.?\d*([eE][-+]?\d+)?)/g;
+                
+                let result;
+                while ((result = patternFace.exec(text)) !== null) {
+                    const nx = parseFloat(result[1]);
+                    const ny = parseFloat(result[3]);
+                    const nz = parseFloat(result[5]);
+                    
+                    for (let i = 0; i < 3; i++) {
+                        vertices.push(
+                            parseFloat(result[7 + i * 6]),
+                            parseFloat(result[9 + i * 6]),
+                            parseFloat(result[11 + i * 6])
+                        );
+                        normals.push(nx, ny, nz);
+                    }
+                }
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                return geometry;
+            }
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate each model slowly
+            models.forEach(model => {
+                model.rotation.x += model.userData.rotationSpeed.x;
+                model.rotation.y += model.userData.rotationSpeed.y;
+                model.rotation.z += model.userData.rotationSpeed.z;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+    </script>
+</body>
+</html>
