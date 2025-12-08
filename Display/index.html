@@ -15,6 +15,7 @@
             font-family: Arial, sans-serif;
             overflow: hidden;
             background: #a2a2a2;
+            cursor: default;
         }
         
         #container {
@@ -26,6 +27,14 @@
             z-index: 0;
         }
         
+        #container canvas {
+            cursor: default;
+        }
+        
+        #container.hovering canvas {
+            cursor: pointer;
+        }
+        
         #content {
             position: fixed;
             top: 50%;
@@ -33,6 +42,7 @@
             transform: translate(-50%, -50%);
             z-index: 10;
             text-align: center;
+            pointer-events: none;
         }
         
         #logo {
@@ -58,39 +68,48 @@
     <div id="content">
         <img id="logo" src="logo.png" alt="Logo">
     </div>
+    <div id="loading">Loading models...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         let scene, camera, renderer;
         let models = [];
+        let raycaster, mouse;
+        let hoveredModel = null;
+        let blurRenderTarget, blurRenderTarget2;
+        
         const modelConfigs = [
             { 
                 file: 'pollinator.stl', 
-                color: 0xff5500,
+                color: 0xff7000,
                 position: { x: -130, y: 40, z: -150 },
                 scale: 200,
-                rotation: { x: -Math.PI / 2, y: 0, z: 0 }
+                rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+                link: '../pollinator/index.html'
             },
             { 
                 file: 'drone.stl', 
-                color: 0xff5500,
+                color: 0xff7000,
                 position: { x: 130, y: -50, z: -200 },
                 scale: 230,
-                rotation: { x: -Math.PI / 1.5, y: 0, z: 0 }
+                rotation: { x: -Math.PI / 1.5, y: 0, z: 0 },
+                link: '../drone/index.html'
             },
             { 
                 file: 'souvenir.stl', 
-                color: 0xff5500,
+                color: 0xff7000,
                 position: { x: -60, y: -80, z: -200 },
                 scale: 150,
-                rotation: { x: -Math.PI / 2, y: 0, z: Math.PI }
+                rotation: { x: -Math.PI / 2, y: 0, z: Math.PI },
+                link: '../souvenir/index.html'
             },
             { 
                 file: 'tank.stl', 
-                color: 0xff5500,
+                color: 0xff7000,
                 position: { x: 90, y: 50, z: -220 },
                 scale: 190,
-                rotation: { x: -Math.PI / 2, y: 0, z: 0 }
+                rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+                link: '../tank/index.html'
             }
         ];
         
@@ -124,10 +143,28 @@
             directionalLight2.position.set(-5, -10, -7);
             scene.add(directionalLight2);
 
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            setupBlurEffect();
             loadModels();
 
             window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onMouseClick);
             animate();
+        }
+
+        function setupBlurEffect() {
+            // Create render targets for blur effect
+            blurRenderTarget = new THREE.WebGLRenderTarget(
+                window.innerWidth,
+                window.innerHeight
+            );
+            blurRenderTarget2 = new THREE.WebGLRenderTarget(
+                window.innerWidth,
+                window.innerHeight
+            );
         }
 
         function loadModels() {
@@ -158,12 +195,20 @@
 
                         mesh.position.set(config.position.x, config.position.y, config.position.z);
 
-                        // Store rotation speeds
+                        // Store rotation speeds and link
                         mesh.userData.rotationSpeed = {
                             x: (Math.random() - 0.5) * 0.002,
                             y: (Math.random() - 0.5) * 0.002,
                             z: (Math.random() - 0.5) * 0.003
                         };
+                        mesh.userData.link = config.link;
+                        mesh.userData.originalColor = config.color;
+                        mesh.userData.isHovered = false;
+                        mesh.userData.blurAmount = 0;
+                        mesh.userData.originalMaterial = material.clone();
+
+                        // Create blurred material for this mesh
+                        mesh.userData.blurredMaterial = createBlurredMaterial(config.color);
 
                         scene.add(mesh);
                         models.push(mesh);
@@ -185,6 +230,93 @@
                     }
                 );
             });
+        }
+
+        function createBlurredMaterial(color) {
+            return new THREE.ShaderMaterial({
+                uniforms: {
+                    color: { value: new THREE.Color(color) },
+                    blurAmount: { value: 0.0 }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 color;
+                    uniform float blurAmount;
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    
+                    void main() {
+                        // Basic lighting
+                        vec3 light = normalize(vec3(5.0, 10.0, 7.0));
+                        float dProd = max(0.0, dot(vNormal, light));
+                        
+                        vec3 baseColor = color * (0.6 + 0.4 * dProd);
+                        
+                        // Add noise for blur effect
+                        float noise = fract(sin(dot(vPosition.xy + vPosition.z, vec2(12.9898, 78.233))) * 43758.5453);
+                        vec3 blurred = mix(baseColor, baseColor * (0.8 + 0.4 * noise), blurAmount * 0.5);
+                        
+                        // Reduce brightness when blurred
+                        blurred = mix(blurred, blurred * 0.7, blurAmount * 0.3);
+                        
+                        gl_FragColor = vec4(blurred, 1.0);
+                    }
+                `,
+                lights: false
+            });
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(models);
+
+            const container = document.getElementById('container');
+            
+            if (intersects.length > 0) {
+                const intersectedModel = intersects[0].object;
+                
+                if (hoveredModel !== intersectedModel) {
+                    // Reset previous hovered model
+                    if (hoveredModel) {
+                        hoveredModel.userData.isHovered = false;
+                    }
+                    
+                    // Set new hovered model
+                    hoveredModel = intersectedModel;
+                    hoveredModel.userData.isHovered = true;
+                    container.classList.add('hovering');
+                }
+            } else {
+                if (hoveredModel) {
+                    hoveredModel.userData.isHovered = false;
+                    hoveredModel = null;
+                    container.classList.remove('hovering');
+                }
+            }
+        }
+
+        function onMouseClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(models);
+
+            if (intersects.length > 0) {
+                const clickedModel = intersects[0].object;
+                if (clickedModel.userData.link) {
+                    window.location.href = clickedModel.userData.link;
+                }
+            }
         }
 
         THREE.STLLoader = function () {};
@@ -272,11 +404,30 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Rotate each model slowly
+            // Rotate each model and handle blur effect
             models.forEach(model => {
                 model.rotation.x += model.userData.rotationSpeed.x;
                 model.rotation.y += model.userData.rotationSpeed.y;
                 model.rotation.z += model.userData.rotationSpeed.z;
+
+                // Smooth blur transition
+                if (model.userData.isHovered) {
+                    model.userData.blurAmount = Math.min(model.userData.blurAmount + 0.08, 1);
+                } else {
+                    model.userData.blurAmount = Math.max(model.userData.blurAmount - 0.08, 0);
+                }
+
+                // Switch material based on blur amount
+                if (model.userData.blurAmount > 0) {
+                    if (model.material !== model.userData.blurredMaterial) {
+                        model.material = model.userData.blurredMaterial;
+                    }
+                    model.userData.blurredMaterial.uniforms.blurAmount.value = model.userData.blurAmount;
+                } else {
+                    if (model.material !== model.userData.originalMaterial) {
+                        model.material = model.userData.originalMaterial;
+                    }
+                }
             });
 
             renderer.render(scene, camera);
@@ -286,6 +437,8 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            blurRenderTarget.setSize(window.innerWidth, window.innerHeight);
+            blurRenderTarget2.setSize(window.innerWidth, window.innerHeight);
         }
 
         init();
