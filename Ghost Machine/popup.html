@@ -1,0 +1,33 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <title>Interaction Ghost</title> <style> body { margin: 0; padding: 12px 14px; width: 240px; background: #070709; color: #f0ece4; font-family: "Times New Roman", Georgia, serif; font-size: 12px; line-height: 1.5; }
+    .title {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    
+    .subtitle {
+      font-size: 11px;
+      color: #a39f95;
+      margin-bottom: 8px;
+    }
+    
+    .line {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.18);
+      margin: 6px 0 8px;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      color: #979389;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 3px;
+    }
+    
+    .stat-value {
+      font-size: 11px;
+      color: #d4cfc4;
+      white-space: pre-wrap;
+    }
+    
+    </style> </head> <body> <div class="title">interaction ghost</div> <div class="subtitle"> a light map of how you move inside this site layered with older traces </div> <div class="line"></div> <div class="stat-label">current tab</div> <div id="host" class="stat-value">loading</div> <div class="stat-label" style="margin-top: 8px;">session</div> <div id="session" class="stat-value"> moves 0 clicks 0 scrolls 0 </div> <div class="stat-label" style="margin-top: 8px;">ghost memory</div> <div id="ghost" class="stat-value">no stored traces yet</div> <script src="popup.js"></script> </body> </html>
