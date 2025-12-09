@@ -1,17 +1,15 @@
 {
     "manifest_version": 3,
-    "name": "Interaction Ghost",
+    "name": "X Ray Interface",
     "version": "1.0",
-    "description": "Maps your interactions on pages and shows a soft ghost of past visits.",
+    "description": "An extension that exposes the hidden structure of browsing",
     "permissions": ["storage", "tabs"],
     "action": {
-    "default_popup": "popup.html"
     },
     "content_scripts": [
     {
     "matches": ["<all_urls>"],
     "js": ["content.js"],
-    "css": ["content.css"],
     "run_at": "document_idle"
     }
     ]
