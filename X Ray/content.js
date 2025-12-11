@@ -2,6 +2,7 @@
   if (window.__xrayInteractionInjected) return
   window.__xrayInteractionInjected = true
   
+  // global refs
   let root
   let layoutLayer
   let traceLayer
@@ -30,83 +31,22 @@
   
   let idleTimer = null
   
+  // webcam
   let video
   let canvas
   let ctx
   let asciiTimer = null
-  let webcamStream = null
+  let webcamInitialized = false
   
+  // feature flags
   let inverseEnabled = true
   let layoutEnabled = true
   let traceEnabled = true
-  let webcamEnabled = true
+  let webcamEnabled = false
   
   let controlPanel
   
-  function createRoot () {
-  root = document.createElement('div')
-  root.style.position = 'fixed'
-  root.style.inset = '0'
-  root.style.pointerEvents = 'none'
-  root.style.zIndex = '2147483646'
-  
-  layoutLayer = document.createElement('div')
-  layoutLayer.style.position = 'absolute'
-  layoutLayer.style.inset = '0'
-  layoutLayer.style.pointerEvents = 'none'
-  
-  traceLayer = document.createElement('div')
-  traceLayer.style.position = 'absolute'
-  traceLayer.style.inset = '0'
-  traceLayer.style.pointerEvents = 'none'
-  
-  ghostLayer = document.createElement('div')
-  ghostLayer.style.position = 'absolute'
-  ghostLayer.style.inset = '0'
-  ghostLayer.style.pointerEvents = 'none'
-  
-  asciiLayer = document.createElement('pre')
-  asciiLayer.style.position = 'absolute'
-  asciiLayer.style.left = '50%'
-  asciiLayer.style.top = '50%'
-  asciiLayer.style.transform = 'translate(-50%, -50%)'
-  asciiLayer.style.pointerEvents = 'none'
-  asciiLayer.style.margin = '0'
-  asciiLayer.style.fontFamily = 'monospace'
-  asciiLayer.style.fontSize = '8px'
-  asciiLayer.style.lineHeight = '8px'
-  asciiLayer.style.color = 'rgba(255,255,255,0.7)'
-  asciiLayer.style.textShadow = '0 0 4px rgba(255,255,255,1)'
-  asciiLayer.style.whiteSpace = 'pre'
-  asciiLayer.style.maxWidth = '90vw'
-  asciiLayer.style.maxHeight = '70vh'
-  asciiLayer.style.overflow = 'hidden'
-  
-  traceSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  traceSvg.setAttribute('width', '100%')
-  traceSvg.setAttribute('height', '100%')
-  traceSvg.style.position = 'absolute'
-  traceSvg.style.left = '0'
-  traceSvg.style.top = '0'
-  traceSvg.style.pointerEvents = 'none'
-  
-  traceLayer.appendChild(traceSvg)
-  
-  root.appendChild(layoutLayer)
-  root.appendChild(traceLayer)
-  root.appendChild(ghostLayer)
-  root.appendChild(asciiLayer)
-  document.documentElement.appendChild(root)
-  
-  applyInverseState()
-  
-  
-  }
-  
-  function applyInverseState () {
-  if (!root) return
-  root.style.mixBlendMode = inverseEnabled ? 'difference' : 'normal'
-  }
+  // small helpers
   
   function labelForTag (tag) {
   if (tag === 'img') return 'IMG'
@@ -120,12 +60,86 @@
   return 'DIV'
   }
   
-  function buildLayoutOverlay () {
-  if (!layoutEnabled) {
-  layoutLayer.innerHTML = ''
-  return
+  function describeRole (el) {
+  if (!el || !el.tagName) return 'target unknown'
+  const t = el.tagName.toLowerCase()
+  if (t === 'a') return 'link node'
+  if (t === 'button') return 'button node'
+  if (t === 'input') return 'field node'
+  if (t === 'textarea') return 'text area'
+  if (el.isContentEditable) return 'edit region'
+  if (t === 'img') return 'image frame'
+  return 'page block'
   }
   
+  // console
+  
+  function createConsoleBox () {
+  consoleBox = document.createElement('div')
+  consoleBox.style.position = 'fixed'
+  consoleBox.style.pointerEvents = 'none'
+  consoleBox.style.fontFamily = 'monospace'
+  consoleBox.style.fontSize = '10px'
+  consoleBox.style.color = 'rgba(255,255,255,0.95)'
+  consoleBox.style.textShadow = '0 0 4px rgba(0,0,0,0.9)'
+  consoleBox.style.maxWidth = '260px'
+  consoleBox.style.lineHeight = '1.3'
+  consoleBox.style.whiteSpace = 'normal'
+  consoleBox.style.wordBreak = 'break-word'
+  consoleBox.style.zIndex = '2147483647'
+  document.documentElement.appendChild(consoleBox)
+  updateConsoleBox()
+  moveConsoleBox()
+  }
+  
+  function moveConsoleBox () {
+  if (!consoleBox) return
+  let x = cursorX + 20
+  let y = cursorY + 20
+  const rect = consoleBox.getBoundingClientRect()
+  if (x + rect.width > window.innerWidth - 8) x = cursorX - rect.width - 20
+  if (y + rect.height > window.innerHeight - 8) y = cursorY - rect.height - 20
+  if (x < 8) x = 8
+  if (y < 8) y = 8
+  consoleBox.style.left = x + 'px'
+  consoleBox.style.top = y + 'px'
+  }
+  
+  function addConsoleLine (text) {
+  consoleLines.push(text)
+  if (consoleLines.length > maxConsoleLines) {
+  consoleLines.splice(0, consoleLines.length - maxConsoleLines)
+  }
+  updateConsoleBox()
+  }
+  
+  function updateConsoleBox () {
+  if (!consoleBox) return
+  consoleBox.innerHTML = ''
+  const title = document.createElement('div')
+  title.textContent = '[CONSOLE] OBSERVING MOVES'
+  title.style.opacity = '0.9'
+  consoleBox.appendChild(title)
+  for (let i = 0; i < consoleLines.length; i++) {
+  const line = document.createElement('div')
+  line.textContent = consoleLines[i]
+  line.style.opacity = i === consoleLines.length - 1 ? '1' : '0.78'
+  consoleBox.appendChild(line)
+  }
+  }
+  
+  // layout x ray
+  
+  function buildLayoutOverlay () {
+  if (!layoutLayer) return
+  
+  if (!layoutEnabled) {
+    layoutLayer.innerHTML = ''
+    layoutLayer.style.display = 'none'
+    return
+  }
+  
+  layoutLayer.style.display = 'block'
   layoutLayer.innerHTML = ''
   
   const nodes = document.querySelectorAll('div, section, article, main, header, footer, nav, img, p')
@@ -175,7 +189,7 @@
     label.style.fontFamily = 'monospace'
     label.style.fontSize = '9px'
     label.style.color = 'rgba(255,255,255,0.95)'
-    label.style.textShadow = '0 0 4px rgba(255,255,255,1)'
+    label.style.textShadow = '0 0 4px rgba(0,0,0,1)'
     label.style.pointerEvents = 'none'
   
     box.appendChild(label)
@@ -186,15 +200,11 @@
   }
   
   function scheduleLayoutRebuild () {
-  if (!layoutEnabled) return
   if (layoutTimer) clearTimeout(layoutTimer)
   layoutTimer = setTimeout(buildLayoutOverlay, 160)
   }
   
-  function applyLayoutState () {
-  layoutLayer.style.display = layoutEnabled ? 'block' : 'none'
-  if (layoutEnabled) buildLayoutOverlay()
-  }
+  // cursor
   
   function createCursorDot () {
   cursorDot = document.createElement('div')
@@ -208,10 +218,11 @@
   cursorDot.style.background = 'radial-gradient(circle, rgba(255,255,255,1) 0, rgba(255,255,255,0.6) 50%, rgba(0,0,0,0) 80%)'
   cursorDot.style.boxShadow = '0 0 12px rgba(255,255,255,1)'
   traceLayer.appendChild(cursorDot)
+  cursorDot.style.display = traceEnabled ? 'block' : 'none'
   }
   
   function setCursorDotPosition (x, y) {
-  if (!traceEnabled) return
+  if (!cursorDot || !traceEnabled) return
   cursorDot.style.left = x + 'px'
   cursorDot.style.top = y + 'px'
   }
@@ -239,18 +250,11 @@
   cursorDot.style.transform = 'translate(-50%, -50%) scale(' + scale + ')'
   }
   
-  function applyTraceState () {
-  traceLayer.style.display = traceEnabled ? 'block' : 'none'
-  }
-  
   function addTraceMark (x, y) {
-  if (!traceEnabled) return
-  
+  if (!traceEnabled || !traceSvg) return
   const now = Date.now()
   if (now - lastTraceTime < 30) return
   lastTraceTime = now
-  
-  if (!traceSvg) return
   
   const cx = x
   const cy = y
@@ -284,138 +288,39 @@
   
   lastTracePoint = { x: cx, y: cy }
   
+  traceLayer.style.display = traceEnabled ? 'block' : 'none'
+  
   
   }
   
-  function createConsoleBox () {
-  consoleBox = document.createElement('div')
-  consoleBox.style.position = 'fixed'
-  consoleBox.style.pointerEvents = 'none'
-  consoleBox.style.fontFamily = 'monospace'
-  consoleBox.style.fontSize = '10px'
-  consoleBox.style.color = 'rgba(255,255,255,0.95)'
-  consoleBox.style.textShadow = '0 0 4px rgba(255,255,255,1)'
-  consoleBox.style.maxWidth = '260px'
-  consoleBox.style.lineHeight = '1.3'
-  consoleBox.style.whiteSpace = 'normal'
-  consoleBox.style.wordBreak = 'break-word'
-  consoleBox.style.zIndex = '2147483647'
-  document.documentElement.appendChild(consoleBox)
-  updateConsoleBox()
-  moveConsoleBox()
-  }
+  // typing ghosts
   
-  function moveConsoleBox () {
-  if (!consoleBox) return
-  let x = cursorX + 20
-  let y = cursorY + 20
-  const rect = consoleBox.getBoundingClientRect()
-  if (x + rect.width > window.innerWidth - 8) x = cursorX - rect.width - 20
-  if (y + rect.height > window.innerHeight - 8) y = cursorY - rect.height - 20
-  if (x < 8) x = 8
-  if (y < 8) y = 8
-  consoleBox.style.left = x + 'px'
-  consoleBox.style.top = y + 'px'
-  }
+  function handleGhostErrors (el, oldVal, newVal) {
+  if (typeof oldVal !== 'string' || typeof newVal !== 'string') return
+  if (newVal.length >= oldVal.length) return
+  const removed = oldVal.slice(newVal.length)
+  if (!removed.trim()) return
   
-  function addConsoleLine (text) {
-  consoleLines.push(text)
-  if (consoleLines.length > maxConsoleLines) {
-  consoleLines.splice(0, consoleLines.length - maxConsoleLines)
-  }
-  updateConsoleBox()
-  }
+  const rect = el.getBoundingClientRect()
+  const ghost = document.createElement('div')
+  ghost.textContent = removed
+  ghost.style.position = 'absolute'
+  ghost.style.left = rect.left + 'px'
+  ghost.style.top = (rect.bottom + 2) + 'px'
+  ghost.style.fontFamily = 'monospace'
+  ghost.style.fontSize = '10px'
+  ghost.style.color = 'rgba(255,255,255,0.25)'
+  ghost.style.textShadow = '0 0 4px rgba(0,0,0,0.9)'
+  ghost.style.pointerEvents = 'none'
+  ghost.style.whiteSpace = 'pre'
+  ghost.style.maxWidth = rect.width + 'px'
+  ghost.style.overflow = 'hidden'
+  ghost.style.textOverflow = 'ellipsis'
   
-  function updateConsoleBox () {
-  if (!consoleBox) return
-  consoleBox.innerHTML = ''
-  const title = document.createElement('div')
-  title.textContent = '[CONSOLE] OBSERVING MOVES'
-  title.style.opacity = '0.9'
-  consoleBox.appendChild(title)
-  for (let i = 0; i < consoleLines.length; i++) {
-  const line = document.createElement('div')
-  line.textContent = consoleLines[i]
-  line.style.opacity = i === consoleLines.length - 1 ? '1' : '0.78'
-  consoleBox.appendChild(line)
-  }
-  }
+  ghostLayer.appendChild(ghost)
+  addConsoleLine('[EDIT] removed text left behind as trace')
   
-  function describeRole (el) {
-  if (!el || !el.tagName) return 'target unknown'
-  const t = el.tagName.toLowerCase()
-  if (t === 'a') return 'link node'
-  if (t === 'button') return 'button node'
-  if (t === 'input') return 'field node'
-  if (t === 'textarea') return 'text area'
-  if (el.isContentEditable) return 'edit region'
-  if (t === 'img') return 'image frame'
-  return 'page block'
-  }
   
-  function logScrollObservation (dy, dt) {
-  if (dt <= 0) {
-  addConsoleLine('[SCROLL] frame held in place')
-  return
-  }
-  const speed = Math.abs(dy) / dt
-  if (dy > 0) {
-  if (speed > 1) addConsoleLine('[SCROLL] fast downward sweep over content')
-  else if (speed > 0.35) addConsoleLine('[SCROLL] steady move down the page')
-  else addConsoleLine('[SCROLL] slow drift downward')
-  } else if (dy < 0) {
-  if (speed > 1) addConsoleLine('[SCROLL] fast upward return through content')
-  else if (speed > 0.35) addConsoleLine('[SCROLL] steady move back up the page')
-  else addConsoleLine('[SCROLL] slow drift upward')
-  } else {
-  addConsoleLine('[SCROLL] position unchanged')
-  }
-  }
-  
-  function logClickObservation (el, heldMs) {
-  const role = describeRole(el)
-  if (heldMs > 700) {
-  addConsoleLine('[CLICK] long press on ' + role)
-  return
-  }
-  if (!el || !el.tagName) {
-  addConsoleLine('[CLICK] press on blank area')
-  return
-  }
-  const t = el.tagName.toLowerCase()
-  if (t === 'a') {
-  const href = el.getAttribute('href') || ''
-  if (href.startsWith('#')) {
-  addConsoleLine('[CLICK] click on internal link node')
-  } else {
-  addConsoleLine('[CLICK] click on link that changes view')
-  }
-  return
-  }
-  if (t === 'button') {
-  addConsoleLine('[CLICK] press on button node')
-  return
-  }
-  if (t === 'input' || t === 'textarea' || el.isContentEditable) {
-  addConsoleLine('[CLICK] focus moved into text field')
-  return
-  }
-  addConsoleLine('[CLICK] interaction on ' + role)
-  }
-  
-  function logHoverObservation (el, duration) {
-  const role = describeRole(el)
-  if (duration == null) {
-  addConsoleLine('[HOVER] cursor passing over ' + role)
-  return
-  }
-  if (duration > 2000) {
-  addConsoleLine('[HOVER] cursor resting on ' + role + ' for a while')
-  } else if (duration > 800) {
-  addConsoleLine('[HOVER] cursor pausing on ' + role)
-  } else {
-  addConsoleLine('[HOVER] quick hover on ' + role)
-  }
   }
   
   function classifyTypingObservation (value, roleText) {
@@ -434,34 +339,6 @@
   return '[TYPE] light text input is being tested'
   }
   
-  function handleGhostErrors (el, oldVal, newVal) {
-  if (typeof oldVal !== 'string' || typeof newVal !== 'string') return
-  if (newVal.length >= oldVal.length) return
-  const removed = oldVal.slice(newVal.length)
-  if (!removed.trim()) return
-  
-  const rect = el.getBoundingClientRect()
-  const ghost = document.createElement('div')
-  ghost.textContent = removed
-  ghost.style.position = 'absolute'
-  ghost.style.left = rect.left + 'px'
-  ghost.style.top = (rect.bottom + 2) + 'px'
-  ghost.style.fontFamily = 'monospace'
-  ghost.style.fontSize = '10px'
-  ghost.style.color = 'rgba(255,255,255,0.25)'
-  ghost.style.textShadow = '0 0 4px rgba(255,255,255,0.6)'
-  ghost.style.pointerEvents = 'none'
-  ghost.style.whiteSpace = 'pre'
-  ghost.style.maxWidth = rect.width + 'px'
-  ghost.style.overflow = 'hidden'
-  ghost.style.textOverflow = 'ellipsis'
-  
-  ghostLayer.appendChild(ghost)
-  addConsoleLine('[EDIT] removed text left behind as trace')
-  
-  
-  }
-  
   function onTypingChanged (el) {
   const value = el.value || ''
   const roleText = describeRole(el)
@@ -469,14 +346,19 @@
   if (obs) addConsoleLine(obs)
   }
   
+  // webcam slash ASCII
+  
   function initWebcamAscii () {
+  if (webcamInitialized) return
+  webcamInitialized = true
+  
   try {
-  video = document.createElement('video')
-  video.autoplay = true
-  video.muted = true
-  video.playsInline = true
-  video.style.display = 'none'
-  document.documentElement.appendChild(video)
+    video = document.createElement('video')
+    video.autoplay = true
+    video.muted = true
+    video.playsInline = true
+    video.style.display = 'none'
+    document.documentElement.appendChild(video)
   
     canvas = document.createElement('canvas')
     canvas.width = 80
@@ -487,7 +369,6 @@
   
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(function (stream) {
-        webcamStream = stream
         video.srcObject = stream
         video.onloadedmetadata = function () {
           video.play()
@@ -495,10 +376,10 @@
         }
       })
       .catch(function () {
-        asciiLayer.textContent = ''
+        if (asciiLayer) asciiLayer.textContent = ''
       })
   } catch (e) {
-    asciiLayer.textContent = ''
+    if (asciiLayer) asciiLayer.textContent = ''
   }
   
   
@@ -508,7 +389,7 @@
   if (!ctx || !video) return
   if (asciiTimer) clearInterval(asciiTimer)
   asciiTimer = setInterval(function () {
-  if (!webcamEnabled) return
+  if (!webcamEnabled || !asciiLayer) return
   if (video.readyState < 2) return
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -528,92 +409,160 @@
   }, 120)
   }
   
-  function applyWebcamState () {
+  // overlay root
+  
+  function createRoot () {
+  root = document.createElement('div')
+  root.style.position = 'fixed'
+  root.style.inset = '0'
+  root.style.pointerEvents = 'none'
+  root.style.zIndex = '2147483646'
+  root.style.mixBlendMode = inverseEnabled ? 'difference' : 'normal'
+  
+  layoutLayer = document.createElement('div')
+  layoutLayer.style.position = 'absolute'
+  layoutLayer.style.inset = '0'
+  layoutLayer.style.pointerEvents = 'none'
+  
+  traceLayer = document.createElement('div')
+  traceLayer.style.position = 'absolute'
+  traceLayer.style.inset = '0'
+  traceLayer.style.pointerEvents = 'none'
+  
+  ghostLayer = document.createElement('div')
+  ghostLayer.style.position = 'absolute'
+  ghostLayer.style.inset = '0'
+  ghostLayer.style.pointerEvents = 'none'
+  
+  asciiLayer = document.createElement('pre')
+  asciiLayer.style.position = 'absolute'
+  asciiLayer.style.left = '50%'
+  asciiLayer.style.top = '50%'
+  asciiLayer.style.transform = 'translate(-50%, -50%)'
+  asciiLayer.style.pointerEvents = 'none'
+  asciiLayer.style.margin = '0'
+  asciiLayer.style.fontFamily = 'monospace'
+  asciiLayer.style.fontSize = '8px'
+  asciiLayer.style.lineHeight = '8px'
+  asciiLayer.style.color = 'rgba(255,255,255,0.7)'
+  asciiLayer.style.textShadow = '0 0 4px rgba(0,0,0,1)'
+  asciiLayer.style.whiteSpace = 'pre'
+  asciiLayer.style.maxWidth = '90vw'
+  asciiLayer.style.maxHeight = '70vh'
+  asciiLayer.style.overflow = 'hidden'
   asciiLayer.style.display = webcamEnabled ? 'block' : 'none'
-  if (webcamEnabled) {
-  if (!video || !webcamStream) initWebcamAscii()
-  } else {
-  if (asciiTimer) {
-  clearInterval(asciiTimer)
-  asciiTimer = null
+  
+  traceSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  traceSvg.setAttribute('width', '100%')
+  traceSvg.setAttribute('height', '100%')
+  traceSvg.style.position = 'absolute'
+  traceSvg.style.left = '0'
+  traceSvg.style.top = '0'
+  traceSvg.style.pointerEvents = 'none'
+  
+  traceLayer.appendChild(traceSvg)
+  
+  root.appendChild(layoutLayer)
+  root.appendChild(traceLayer)
+  root.appendChild(ghostLayer)
+  root.appendChild(asciiLayer)
+  document.documentElement.appendChild(root)
+  
+  
   }
-  asciiLayer.textContent = ''
-  if (webcamStream) {
-  webcamStream.getTracks().forEach(function (t) { t.stop() })
-  webcamStream = null
-  }
-  }
-  }
+  
+  // control panel
   
   function createControlPanel () {
   controlPanel = document.createElement('div')
   controlPanel.style.position = 'fixed'
   controlPanel.style.top = '10px'
   controlPanel.style.right = '10px'
+  controlPanel.style.padding = '8px 10px'
+  controlPanel.style.fontFamily = 'monospace'
+  controlPanel.style.fontSize = '11px'
+  controlPanel.style.color = '#ffffff'
+  controlPanel.style.background = 'rgba(0,0,0,0.9)'
+  controlPanel.style.border = '1px solid rgba(255,255,255,0.8)'
+  controlPanel.style.borderRadius = '4px'
   controlPanel.style.zIndex = '2147483647'
   controlPanel.style.pointerEvents = 'auto'
-  controlPanel.style.fontFamily = 'monospace'
-  controlPanel.style.fontSize = '10px'
-  controlPanel.style.color = 'rgba(255,255,255,0.9)'
-  controlPanel.style.border = '1px solid rgba(255,255,255,0.6)'
-  controlPanel.style.padding = '6px 8px'
-  controlPanel.style.background = 'rgba(0,0,0,0.15)'
-  controlPanel.style.backdropFilter = 'blur(2px)'
-  controlPanel.style.textShadow = '0 0 4px rgba(255,255,255,1)'
+  controlPanel.style.boxShadow = '0 0 10px rgba(0,0,0,0.7)'
   
-  const title = document.createElement('div')
-  title.textContent = '[X RAY CONTROL]'
-  title.style.marginBottom = '4px'
-  controlPanel.appendChild(title)
-  
-  function makeToggleRow (labelText, initial, onChange) {
+  function makeToggleRow (labelText, checked, onChange) {
     const row = document.createElement('label')
     row.style.display = 'flex'
     row.style.alignItems = 'center'
-    row.style.gap = '4px'
-    row.style.margin = '2px 0'
+    row.style.gap = '6px'
     row.style.cursor = 'pointer'
+    row.style.marginBottom = '4px'
   
-    const checkbox = document.createElement('input')
-    checkbox.type = 'checkbox'
-    checkbox.checked = initial
-    checkbox.style.cursor = 'pointer'
-    checkbox.addEventListener('change', function () {
-      onChange(checkbox.checked)
+    const box = document.createElement('input')
+    box.type = 'checkbox'
+    box.checked = checked
+    box.style.margin = '0'
+  
+    box.addEventListener('change', function () {
+      onChange(box.checked)
     })
   
-    const span = document.createElement('span')
-    span.textContent = labelText
+    const text = document.createElement('span')
+    text.textContent = labelText
   
-    row.appendChild(checkbox)
-    row.appendChild(span)
-    controlPanel.appendChild(row)
+    row.appendChild(box)
+    row.appendChild(text)
+    return row
   }
   
-  makeToggleRow('inverse color', inverseEnabled, function (v) {
-    inverseEnabled = v
-    applyInverseState()
+  const title = document.createElement('div')
+  title.textContent = 'x ray controls'
+  title.style.marginBottom = '6px'
+  title.style.fontWeight = 'bold'
+  controlPanel.appendChild(title)
+  
+  const inverseRow = makeToggleRow('inverse color', inverseEnabled, function (val) {
+    inverseEnabled = val
+    if (root) {
+      root.style.mixBlendMode = inverseEnabled ? 'difference' : 'normal'
+    }
   })
   
-  makeToggleRow('layout x ray', layoutEnabled, function (v) {
-    layoutEnabled = v
-    applyLayoutState()
+  const layoutRow = makeToggleRow('layout x-ray', layoutEnabled, function (val) {
+    layoutEnabled = val
+    buildLayoutOverlay()
   })
   
-  makeToggleRow('cursor web', traceEnabled, function (v) {
-    traceEnabled = v
-    applyTraceState()
+  const traceRow = makeToggleRow('cursor web', traceEnabled, function (val) {
+    traceEnabled = val
+    if (traceLayer) {
+      traceLayer.style.display = traceEnabled ? 'block' : 'none'
+    }
+    if (cursorDot) {
+      cursorDot.style.display = traceEnabled ? 'block' : 'none'
+    }
   })
   
-  makeToggleRow('webcam ascii', webcamEnabled, function (v) {
-    webcamEnabled = v
-    applyWebcamState()
+  const webcamRow = makeToggleRow('webcam /', webcamEnabled, function (val) {
+    webcamEnabled = val
+    if (asciiLayer) {
+      asciiLayer.style.display = webcamEnabled ? 'block' : 'none'
+    }
+    if (webcamEnabled) {
+      initWebcamAscii()
+    }
   })
+  
+  controlPanel.appendChild(inverseRow)
+  controlPanel.appendChild(layoutRow)
+  controlPanel.appendChild(traceRow)
+  controlPanel.appendChild(webcamRow)
   
   document.documentElement.appendChild(controlPanel)
   
   
   }
+  
+  // event wiring
   
   document.addEventListener('mousemove', function (e) {
   cursorX = e.clientX
@@ -621,11 +570,13 @@
   setCursorDotPosition(cursorX, cursorY)
   addTraceMark(cursorX, cursorY)
   moveConsoleBox()
+  if (traceEnabled) {
   setCursorDotIdleState(false)
   if (idleTimer) clearTimeout(idleTimer)
   idleTimer = setTimeout(function () {
   setCursorDotIdleState(true)
   }, 500)
+  }
   }, true)
   
   document.addEventListener('mouseover', function (e) {
@@ -722,13 +673,82 @@
   
   window.addEventListener('resize', scheduleLayoutRebuild)
   
+  // logging helpers
+  
+  function logScrollObservation (dy, dt) {
+  if (dt <= 0) {
+  addConsoleLine('[SCROLL] frame held in place')
+  return
+  }
+  const speed = Math.abs(dy) / dt
+  if (dy > 0) {
+  if (speed > 1) addConsoleLine('[SCROLL] fast downward sweep over content')
+  else if (speed > 0.35) addConsoleLine('[SCROLL] steady move down the page')
+  else addConsoleLine('[SCROLL] slow drift downward')
+  } else if (dy < 0) {
+  if (speed > 1) addConsoleLine('[SCROLL] fast upward return through content')
+  else if (speed > 0.35) addConsoleLine('[SCROLL] steady move back up the page')
+  else addConsoleLine('[SCROLL] slow drift upward')
+  } else {
+  addConsoleLine('[SCROLL] position unchanged')
+  }
+  }
+  
+  function logClickObservation (el, heldMs) {
+  const role = describeRole(el)
+  if (heldMs > 700) {
+  addConsoleLine('[CLICK] long press on ' + role)
+  return
+  }
+  if (!el || !el.tagName) {
+  addConsoleLine('[CLICK] press on blank area')
+  return
+  }
+  const t = el.tagName.toLowerCase()
+  if (t === 'a') {
+  const href = el.getAttribute('href') || ''
+  if (href.startsWith('#')) {
+  addConsoleLine('[CLICK] click on internal link node')
+  } else {
+  addConsoleLine('[CLICK] click on link that changes view')
+  }
+  return
+  }
+  if (t === 'button') {
+  addConsoleLine('[CLICK] press on button node')
+  return
+  }
+  if (t === 'input' || t === 'textarea' || el.isContentEditable) {
+  addConsoleLine('[CLICK] focus moved into text field')
+  return
+  }
+  addConsoleLine('[CLICK] interaction on ' + role)
+  }
+  
+  function logHoverObservation (el, duration) {
+  const role = describeRole(el)
+  if (duration == null) {
+  addConsoleLine('[HOVER] cursor passing over ' + role)
+  return
+  }
+  if (duration > 2000) {
+  addConsoleLine('[HOVER] cursor resting on ' + role + ' for a while')
+  } else if (duration > 800) {
+  addConsoleLine('[HOVER] cursor pausing on ' + role)
+  } else {
+  addConsoleLine('[HOVER] quick hover on ' + role)
+  }
+  }
+  
+  // init order:
+  // 1. control panel (so you always see it)
+  // 2. overlay root and layers
+  // 3. cursor + console + layout
+  
+  createControlPanel()
   createRoot()
   createCursorDot()
   createConsoleBox()
-  createControlPanel()
-  applyLayoutState()
-  applyTraceState()
-  applyWebcamState()
   buildLayoutOverlay()
   moveConsoleBox()
   addConsoleLine('[SESSION] x ray overlay is watching this page')
