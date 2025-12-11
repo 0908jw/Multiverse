@@ -34,6 +34,14 @@
   let canvas
   let ctx
   let asciiTimer = null
+  let webcamStream = null
+  
+  let inverseEnabled = true
+  let layoutEnabled = true
+  let traceEnabled = true
+  let webcamEnabled = true
+  
+  let controlPanel
   
   function createRoot () {
   root = document.createElement('div')
@@ -41,7 +49,6 @@
   root.style.inset = '0'
   root.style.pointerEvents = 'none'
   root.style.zIndex = '2147483646'
-  root.style.mixBlendMode = 'difference'
   
   layoutLayer = document.createElement('div')
   layoutLayer.style.position = 'absolute'
@@ -91,7 +98,14 @@
   root.appendChild(asciiLayer)
   document.documentElement.appendChild(root)
   
+  applyInverseState()
   
+  
+  }
+  
+  function applyInverseState () {
+  if (!root) return
+  root.style.mixBlendMode = inverseEnabled ? 'difference' : 'normal'
   }
   
   function labelForTag (tag) {
@@ -107,6 +121,11 @@
   }
   
   function buildLayoutOverlay () {
+  if (!layoutEnabled) {
+  layoutLayer.innerHTML = ''
+  return
+  }
+  
   layoutLayer.innerHTML = ''
   
   const nodes = document.querySelectorAll('div, section, article, main, header, footer, nav, img, p')
@@ -167,8 +186,14 @@
   }
   
   function scheduleLayoutRebuild () {
+  if (!layoutEnabled) return
   if (layoutTimer) clearTimeout(layoutTimer)
   layoutTimer = setTimeout(buildLayoutOverlay, 160)
+  }
+  
+  function applyLayoutState () {
+  layoutLayer.style.display = layoutEnabled ? 'block' : 'none'
+  if (layoutEnabled) buildLayoutOverlay()
   }
   
   function createCursorDot () {
@@ -186,6 +211,7 @@
   }
   
   function setCursorDotPosition (x, y) {
+  if (!traceEnabled) return
   cursorDot.style.left = x + 'px'
   cursorDot.style.top = y + 'px'
   }
@@ -213,7 +239,13 @@
   cursorDot.style.transform = 'translate(-50%, -50%) scale(' + scale + ')'
   }
   
+  function applyTraceState () {
+  traceLayer.style.display = traceEnabled ? 'block' : 'none'
+  }
+  
   function addTraceMark (x, y) {
+  if (!traceEnabled) return
+  
   const now = Date.now()
   if (now - lastTraceTime < 30) return
   lastTraceTime = now
@@ -298,7 +330,7 @@
   if (!consoleBox) return
   consoleBox.innerHTML = ''
   const title = document.createElement('div')
-  title.textContent = '[CONSOLE]'
+  title.textContent = '[CONSOLE] OBSERVING MOVES'
   title.style.opacity = '0.9'
   consoleBox.appendChild(title)
   for (let i = 0; i < consoleLines.length; i++) {
@@ -455,6 +487,7 @@
   
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(function (stream) {
+        webcamStream = stream
         video.srcObject = stream
         video.onloadedmetadata = function () {
           video.play()
@@ -475,6 +508,7 @@
   if (!ctx || !video) return
   if (asciiTimer) clearInterval(asciiTimer)
   asciiTimer = setInterval(function () {
+  if (!webcamEnabled) return
   if (video.readyState < 2) return
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
@@ -492,6 +526,93 @@
   }
   asciiLayer.textContent = out
   }, 120)
+  }
+  
+  function applyWebcamState () {
+  asciiLayer.style.display = webcamEnabled ? 'block' : 'none'
+  if (webcamEnabled) {
+  if (!video || !webcamStream) initWebcamAscii()
+  } else {
+  if (asciiTimer) {
+  clearInterval(asciiTimer)
+  asciiTimer = null
+  }
+  asciiLayer.textContent = ''
+  if (webcamStream) {
+  webcamStream.getTracks().forEach(function (t) { t.stop() })
+  webcamStream = null
+  }
+  }
+  }
+  
+  function createControlPanel () {
+  controlPanel = document.createElement('div')
+  controlPanel.style.position = 'fixed'
+  controlPanel.style.top = '10px'
+  controlPanel.style.right = '10px'
+  controlPanel.style.zIndex = '2147483647'
+  controlPanel.style.pointerEvents = 'auto'
+  controlPanel.style.fontFamily = 'monospace'
+  controlPanel.style.fontSize = '10px'
+  controlPanel.style.color = 'rgba(255,255,255,0.9)'
+  controlPanel.style.border = '1px solid rgba(255,255,255,0.6)'
+  controlPanel.style.padding = '6px 8px'
+  controlPanel.style.background = 'rgba(0,0,0,0.15)'
+  controlPanel.style.backdropFilter = 'blur(2px)'
+  controlPanel.style.textShadow = '0 0 4px rgba(255,255,255,1)'
+  
+  const title = document.createElement('div')
+  title.textContent = '[X RAY CONTROL]'
+  title.style.marginBottom = '4px'
+  controlPanel.appendChild(title)
+  
+  function makeToggleRow (labelText, initial, onChange) {
+    const row = document.createElement('label')
+    row.style.display = 'flex'
+    row.style.alignItems = 'center'
+    row.style.gap = '4px'
+    row.style.margin = '2px 0'
+    row.style.cursor = 'pointer'
+  
+    const checkbox = document.createElement('input')
+    checkbox.type = 'checkbox'
+    checkbox.checked = initial
+    checkbox.style.cursor = 'pointer'
+    checkbox.addEventListener('change', function () {
+      onChange(checkbox.checked)
+    })
+  
+    const span = document.createElement('span')
+    span.textContent = labelText
+  
+    row.appendChild(checkbox)
+    row.appendChild(span)
+    controlPanel.appendChild(row)
+  }
+  
+  makeToggleRow('inverse color', inverseEnabled, function (v) {
+    inverseEnabled = v
+    applyInverseState()
+  })
+  
+  makeToggleRow('layout x ray', layoutEnabled, function (v) {
+    layoutEnabled = v
+    applyLayoutState()
+  })
+  
+  makeToggleRow('cursor web', traceEnabled, function (v) {
+    traceEnabled = v
+    applyTraceState()
+  })
+  
+  makeToggleRow('webcam ascii', webcamEnabled, function (v) {
+    webcamEnabled = v
+    applyWebcamState()
+  })
+  
+  document.documentElement.appendChild(controlPanel)
+  
+  
   }
   
   document.addEventListener('mousemove', function (e) {
@@ -533,11 +654,9 @@
   }
   }, true)
   
-  let downTarget = null
   let downTime = 0
   
-  document.addEventListener('mousedown', function (e) {
-  downTarget = e.target
+  document.addEventListener('mousedown', function () {
   downTime = Date.now()
   addConsoleLine('[MOUSE] button pressed down')
   }, true)
@@ -545,7 +664,6 @@
   document.addEventListener('mouseup', function (e) {
   const held = Date.now() - downTime
   logClickObservation(e.target, held)
-  downTarget = null
   downTime = 0
   }, true)
   
@@ -607,8 +725,11 @@
   createRoot()
   createCursorDot()
   createConsoleBox()
+  createControlPanel()
+  applyLayoutState()
+  applyTraceState()
+  applyWebcamState()
   buildLayoutOverlay()
   moveConsoleBox()
   addConsoleLine('[SESSION] x ray overlay is watching this page')
-  initWebcamAscii()
   })()
