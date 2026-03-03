@@ -90,7 +90,7 @@
         <div id="pause-track"><div id="pause-fill"></div></div>
       </div>
 
-      <div id="hint">⌘S — export</div>
+      <div id="hint">⌘S — export text </div>
     </div>
   </div>
 
@@ -156,8 +156,30 @@ function vnoise(x, y) {
 // ── Build mask + column data ──────────────────────────────────────────────────
 function buildMask() {
   const W  = canvas.width, H = canvas.height;
-  const fs = 72; // font size fixed — Longing controls radial push, not scale
-  const raw_text = document.getElementById('text-input').value || 'Water';
+  const raw_text = document.getElementById('text-input').value || 'hi';
+
+  // Auto-fit font size so text always stays inside canvas,
+  // accounting for Longing spread which fans columns outward.
+  const longing   = getLonging() / 100;
+  const spreadMul = 1.0 + longing * 1.5; // matches render drawX formula
+  const margin    = 40; // px padding each side
+  const lines     = raw_text.split('\n').filter(l => l.trim().length > 0);
+
+  // Binary-search the largest fs where all lines fit width AND total height fits
+  let fs = 8;
+  for (let probe = 200; probe >= 1; probe = Math.floor(probe / 2)) {
+    const candidate = fs + probe;
+    mX.font = `${candidate}px ALTNadrey, Georgia, serif`;
+    const maxW = Math.max(...lines.map(l => mX.measureText(l).width));
+    const totalH = lines.length * candidate * 1.55;
+    // The spread fan expands drawn x-positions by spreadMul from canvas center.
+    // Worst case: a bar at canvas edge gets pushed further out.
+    // Safe bound: text pixel width * spreadMul must fit in W - margin*2
+    if (maxW * spreadMul <= W - margin * 2 && totalH <= H - margin * 2) {
+      fs = candidate;
+    }
+    if (probe === 1) break;
+  }
 
   mW = W; mH = H;
   mC.width = W; mC.height = H;
@@ -166,7 +188,6 @@ function buildMask() {
   mX.fillStyle = '#000';
 
   // Split into lines, render each centred
-  const lines    = raw_text.split('\n').filter(l => l.trim().length > 0);
   const lineH    = fs * 1.55;
   const totalH   = lines.length * lineH;
   const startY   = H/2 - totalH/2 + fs * 0.85;
