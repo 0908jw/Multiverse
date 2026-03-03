@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wavering Line — Visual Archive No. 201</title>
+<title>〣...〣...〣...〣...〣...〣..〣...〣...〣..〣...〣...〣..</title>
 <style>
   @font-face {
     font-family: 'ALTNadrey';
@@ -90,7 +90,7 @@
         <div id="pause-track"><div id="pause-fill"></div></div>
       </div>
 
-      <div id="hint">⌘S — export svg</div>
+      <div id="hint">⌘S — export text</div>
     </div>
   </div>
 
@@ -520,7 +520,7 @@ document.addEventListener('keydown', e => {
     parts.push('</svg>');
     const blob = new Blob([parts.join('')], {type:'image/svg+xml'});
     const a = document.createElement('a');
-    a.download = 'wavering-line.svg';
+    a.download = 'copy.svg';
     a.href = URL.createObjectURL(blob);
     a.click();
   }
