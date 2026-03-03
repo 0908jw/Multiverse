@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>│...│...│...│...│...│...│...│...</title>
+<title>Wavering Line — Visual Archive No. 201</title>
 <style>
   @font-face {
     font-family: 'ALTNadrey';
@@ -69,19 +69,19 @@
 
     <div id="controls">
       <div class="sl-block">
-        <div class="sl-label">Longing</div>
+        <div class="sl-label">Longing <span id="pct-size">0%</span></div>
         <input type="range" id="sl-size" min="0" max="100" value="0">
       </div>
       <div class="sl-block">
-        <div class="sl-label">Thinking</div>
+        <div class="sl-label">Thinking <span id="pct-cols">50%</span></div>
         <input type="range" id="sl-cols" min="1" max="6" value="3">
       </div>
       <div class="sl-block">
-        <div class="sl-label">Missing</div>
+        <div class="sl-label">Missing <span id="pct-bw">14%</span></div>
         <input type="range" id="sl-bw" min="1" max="8" value="2">
       </div>
       <div class="sl-block">
-        <div class="sl-label">Deleting</div>
+        <div class="sl-label">Deleting <span id="pct-spd">11%</span></div>
         <input type="range" id="sl-spd" min="1" max="10" value="2">
       </div>
 
@@ -90,7 +90,7 @@
         <div id="pause-track"><div id="pause-fill"></div></div>
       </div>
 
-      <div id="hint">⌘S — export text </div>
+      <div id="hint">⌘S — export svg</div>
     </div>
   </div>
 
@@ -415,10 +415,23 @@ function loop() {
 }
 
 // ── UI ───────────────────────────────────────────────────────────────────────
-['size','cols','bw'].forEach(key => {
-  document.getElementById(`sl-${key}`).addEventListener('input', () => { needsRebuild = true; });
+// Slider percentage display + rebuild only where structurally necessary
+function sliderPct(id, min, max) {
+  const el = document.getElementById(id);
+  const pct = Math.round((el.value - min) / (max - min) * 100);
+  const span = document.getElementById('pct-' + id.replace('sl-',''));
+  if (span) span.textContent = pct + '%';
+}
+['size','cols','bw','spd'].forEach(id => {
+  const el = document.getElementById(`sl-${id}`);
+  el.addEventListener('input', () => {
+    // Only cols changes the bar structure — others are live render params
+    if (id === 'cols') needsRebuild = true;
+    const mins = {size:0, cols:1, bw:1, spd:1};
+    const maxs = {size:100, cols:6, bw:8, spd:10};
+    sliderPct(`sl-${id}`, mins[id], maxs[id]);
+  });
 });
-// speed slider has no label to update
 
 document.getElementById('text-input').addEventListener('input', () => {
   lastTypeMs  = Date.now();
@@ -507,7 +520,7 @@ document.addEventListener('keydown', e => {
     parts.push('</svg>');
     const blob = new Blob([parts.join('')], {type:'image/svg+xml'});
     const a = document.createElement('a');
-    a.download = 'copy.svg';
+    a.download = 'wavering-line.svg';
     a.href = URL.createObjectURL(blob);
     a.click();
   }
