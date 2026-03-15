@@ -569,7 +569,7 @@ document.addEventListener('keydown', e => {
     parts.push('</svg>');
     const blob = new Blob([parts.join('')], {type:'image/svg+xml'});
     const a = document.createElement('a');
-    a.download = 'latentvariable_sketch.svg';
+    a.download = 'latents_sketch.svg';
     a.href = URL.createObjectURL(blob);
     a.click();
   }
